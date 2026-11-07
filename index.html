@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Планировщик: сервис оптимизации закупок</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#ffffff; --ink:#1e2433; --muted:#6b7488; --line:#e4e8f1;
+    --accent:#4f46e5; --accent-soft:#eef0ff; --ok:#059669; --ok-soft:#e7f8f1;
+    --warn:#d97706; --warn-soft:#fff4e0;
+  }
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 1px 2px rgba(20,28,60,.04),0 6px 20px rgba(20,28,60,.04)}
+  .tab-btn{padding:.55rem 1.1rem;border-radius:999px;font-weight:600;font-size:.9rem;color:var(--muted);transition:all .2s}
+  .tab-btn:hover{color:var(--ink)}
+  .tab-btn.active{background:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(79,70,229,.3)}
+  .bar{height:8px;border-radius:99px;background:#eceff7;overflow:hidden}
+  .bar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#6366f1,#8b5cf6);transition:width .6s ease}
+  .bar.ok>i{background:linear-gradient(90deg,#10b981,#34d399)}
+  .donut-fg{transition:stroke-dashoffset .8s ease}
+  .task{transition:box-shadow .2s,transform .2s,opacity .2s;animation:fadeIn .35s ease both}
+  .task:hover{box-shadow:0 8px 26px rgba(20,28,60,.09)}
+  .task.today{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,70,229,.12)}
+  .task.done-card{opacity:.82}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .chip{display:inline-flex;align-items:center;gap:.25rem;font-size:.72rem;font-weight:600;padding:.18rem .55rem;border-radius:99px;white-space:nowrap}
+  .chip.todo{background:#eef0f5;color:#5b6478}
+  .chip.progress{background:var(--accent-soft);color:var(--accent)}
+  .chip.done{background:var(--ok-soft);color:var(--ok)}
+  .chip.moved{background:var(--warn-soft);color:var(--warn)}
+  .chip.now{background:var(--accent);color:#fff}
+  .chip.ms{background:#fdf2f8;color:#be185d}
+  .datebox{min-width:56px;text-align:center;border-radius:14px;background:var(--accent-soft);color:var(--accent);padding:.4rem .3rem;line-height:1.1}
+  .datebox b{display:block;font-size:1.35rem}
+  .datebox span{font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+  .st-btn{border:1px solid var(--line);border-radius:10px;padding:.4rem .8rem;font-size:.82rem;font-weight:600;color:var(--muted);background:#fff;transition:all .15s}
+  .st-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .st-btn.on.todo{background:#eef0f5;color:#3b4357;border-color:#cfd5e3}
+  .st-btn.on.progress{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .st-btn.on.done{background:var(--ok);color:#fff;border-color:var(--ok)}
+  .sub{display:flex;gap:.6rem;align-items:flex-start;padding:.35rem .25rem;border-radius:8px;cursor:pointer;font-size:.92rem;line-height:1.4}
+  .sub:hover{background:#f6f7fb}
+  .sub input{margin-top:.2rem;width:1.05rem;height:1.05rem;accent-color:var(--accent);flex:none;cursor:pointer}
+  .sub.checked span{color:var(--muted);text-decoration:line-through}
+  textarea.note{width:100%;min-height:78px;border:1px solid var(--line);border-radius:12px;padding:.65rem .8rem;font:inherit;font-size:.9rem;resize:vertical;background:#fbfcfe;outline:none;transition:border .15s,box-shadow .15s}
+  textarea.note:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,70,229,.12);background:#fff}
+  .chev{transition:transform .2s}
+  .open .chev{transform:rotate(180deg)}
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+
+  <header class="flex flex-wrap items-start justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Планировщик проекта</h1>
+      <p class="text-sm sm:text-base mt-1" style="color:var(--muted)">Сервис оптимизации закупок строительных материалов · 8–30 ноября 2026</p>
+      <p id="todayLabel" class="text-sm mt-2 font-semibold" style="color:var(--accent)"></p>
+    </div>
+    <button id="resetBtn" class="st-btn" style="padding:.55rem 1rem">Сбросить прогресс</button>
+  </header>
+
+  <!-- Сводка -->
+  <section class="grid md:grid-cols-3 gap-4 mb-6">
+    <div class="card p-5 flex items-center gap-5">
+      <div class="relative" style="width:128px;height:128px;flex:none">
+        <svg viewBox="0 0 120 120" width="128" height="128" style="transform:rotate(-90deg)">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#eceff7" stroke-width="12"/>
+          <circle id="donut" class="donut-fg" cx="60" cy="60" r="50" fill="none" stroke="url(#g)" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+          <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <div id="pct" class="text-3xl font-extrabold">0%</div>
+          <div class="text-xs" style="color:var(--muted)">общий прогресс</div>
+        </div>
+      </div>
+      <div class="text-sm space-y-1">
+        <div><span style="color:var(--muted)">Выполнено задач:</span> <b id="statDone">0</b> / <b id="statAll">0</b></div>
+        <div><span style="color:var(--muted)">Часов:</span> <b id="statHours">0</b> / <b id="statHoursAll">0</b></div>
+      </div>
+    </div>
+    <div class="card p-5 md:col-span-2">
+      <h2 class="font-bold mb-3">Прогресс по этапам</h2>
+      <div id="stages" class="space-y-3"></div>
+    </div>
+  </section>
+
+  <!-- Вкладки -->
+  <nav class="flex gap-2 mb-5 p-1 rounded-full w-fit" style="background:#e9ecf6">
+    <button class="tab-btn active" data-tab="today">Сегодня</button>
+    <button class="tab-btn" data-tab="schedule">Расписание</button>
+  </nav>
+
+  <main>
+    <div id="view-today"></div>
+    <div id="view-schedule" class="hidden space-y-3"></div>
+  </main>
+
+  <footer class="text-center text-xs mt-10" style="color:var(--muted)">
+    Незавершённые задачи переносятся автоматически по системной дате устройства. Данные хранятся в вашем браузере.
+  </footer>
+</div>
+
+<script>
+/* ============ Расписание ============ */
+const plan = [
+  { id:'d08', d:'2026-11-08', h:6.5, t:'Исследование процесса закупки и начало пояснительной записки', s:[
+    'Изучить процесс закупки строительных материалов и ресурсов.',
+    'Описать основные этапы закупочного процесса.',
+    'Определить участников процесса и их задачи.',
+    'Выявить основные проблемы при поиске и сравнении предложений поставщиков.',
+    'Начать написание раздела 1.1.',
+    'Создать реестр используемых источников.']},
+  { id:'d09', d:'2026-11-09', h:7, t:'Завершение исследования проблем закупки', s:[
+    'Завершить раздел 1.1.',
+    'Систематизировать проблемы поиска строительных товаров.',
+    'Изучить проблемы сравнения предложений разных поставщиков.',
+    'Рассмотреть влияние наличия, количества, характеристик и доставки на выбор предложения.',
+    'Подобрать официальные и надёжные источники, подтверждающие выявленные проблемы.']},
+  { id:'d10', d:'2026-11-10', h:7, t:'Исследование аналогов и существующих решений', s:[
+    'Найти существующие сервисы и программные решения для закупок.',
+    'Изучить электронные торговые площадки и каталоги поставщиков.',
+    'Рассмотреть возможности автоматизации поиска и сравнения товаров.',
+    'Начать раздел 1.2.',
+    'Зафиксировать преимущества и недостатки существующих решений.']},
+  { id:'d11', d:'2026-11-11', h:7.5, t:'Сравнение аналогов и завершение аналитической части', s:[
+    'Составить сравнительную таблицу аналогов.',
+    'Сравнить функциональность существующих решений.',
+    'Выявить недостатки аналогов относительно задач проекта.',
+    'Подготовить раздел 1.3.',
+    'Сформулировать выводы по первой главе.']},
+  { id:'d12', d:'2026-11-12', h:7.5, t:'Требования к разрабатываемому сервису', s:[
+    'Отредактировать первую главу.',
+    'Сформировать функциональные требования.',
+    'Сформировать нефункциональные требования.',
+    'Определить основные сценарии использования.',
+    'Сформировать перечень функций первой версии.',
+    'Определить ограничения проекта.']},
+  { id:'d13', d:'2026-11-13', h:8, t:'Исследование поставщиков и источников данных', ms:'13 ноября: первая глава завершена, исследование поставщиков начато.', s:[
+    'Изучить способы получения данных от поставщиков.',
+    'Исследовать доступность API и открытых выгрузок.',
+    'Рассмотреть форматы данных поставщиков.',
+    'Изучить ограничения использования данных.',
+    'Завершить первую главу пояснительной записки.',
+    'Начать подготовку презентации: слайды 1–5.']},
+  { id:'d14', d:'2026-11-14', h:7.5, t:'Форматы данных и способы интеграции', s:[
+    'Изучить CSV, JSON, XML, YML и другие возможные форматы.',
+    'Определить допустимые способы получения данных.',
+    'Разделить реальные интеграции и демонстрационные адаптеры.',
+    'Продумать единый формат представления предложений.',
+    'Зафиксировать ограничения каждого способа получения данных.']},
+  { id:'d15', d:'2026-11-15', h:7.5, t:'Формирование входных данных и условий закупки', s:[
+    'Определить структуру пользовательской корзины.',
+    'Определить обязательные характеристики товаров.',
+    'Сформировать правила проверки наличия.',
+    'Определить правила обработки количества и упаковок.',
+    'Продумать обработку замен товаров.',
+    'Подготовить раздел 2.1.']},
+  { id:'d16', d:'2026-11-16', h:7.5, t:'Модель расчёта полной стоимости', s:[
+    'Определить состав полной стоимости закупки.',
+    'Учесть стоимость товаров.',
+    'Учесть стоимость доставки.',
+    'Учесть обязательные дополнительные расходы.',
+    'Определить правила учёта скидок, предоставляемых поставщиками.',
+    'Продумать обработку неизвестных расходов.',
+    'Разработать первую модель формирования закупочного варианта.']},
+  { id:'d17', d:'2026-11-17', h:8, t:'Разработка альтернативных моделей оптимизации', s:[
+    'Разработать вторую модель оптимизации.',
+    'Разработать третью модель оптимизации.',
+    'Определить различия между моделями.',
+    'Подготовить контрольные примеры.',
+    'Выбрать предварительный технологический стек.',
+    'Зафиксировать обоснование выбора.']},
+  { id:'d18', d:'2026-11-18', h:8, t:'Проверка моделей и расчётов', ms:'18 ноября: проверены три модели оптимизации и ручные расчёты.', s:[
+    'Провести ручные расчёты контрольных примеров.',
+    'Проверить работу трёх моделей.',
+    'Сравнить полученные результаты.',
+    'Выявить возможные ошибки и неоднозначности.',
+    'Завершить разделы 2.1 и 2.2.',
+    'Подготовить следующие слайды презентации.']},
+  { id:'d19', d:'2026-11-19', h:8, t:'Проектирование архитектуры', s:[
+    'Разработать общую архитектуру сервиса.',
+    'Определить основные программные модули.',
+    'Продумать взаимодействие frontend и backend.',
+    'Определить API-контракты.',
+    'Спроектировать структуру базы данных.',
+    'Зафиксировать связи между основными сущностями.']},
+  { id:'d20', d:'2026-11-20', h:8, t:'Проектирование алгоритмов и интерфейса', s:[
+    'Разработать правила сопоставления товаров.',
+    'Продумать сравнение наименований и характеристик.',
+    'Определить правила проверки наличия и количества.',
+    'Продумать обработку частичных предложений.',
+    'Разработать предварительные макеты интерфейса.',
+    'Подготовить материалы для соответствующих подразделов главы 2.']},
+  { id:'d21', d:'2026-11-21', h:7, t:'Подготовка среды разработки', ms:'21 ноября: подготовлены проектирование, дизайн и среда разработки.', s:[
+    'Завершить основные макеты интерфейса.',
+    'Подготовить структуру проекта.',
+    'Настроить среду разработки.',
+    'Подготовить базу данных.',
+    'Реализовать начальную структуру backend.',
+    'Описать выбранные технологии в пояснительной записке.']},
+  { id:'d22', d:'2026-11-22', h:8, t:'Разработка серверной основы', s:[
+    'Реализовать слой работы с базой данных.',
+    'Реализовать API для пользовательской корзины.',
+    'Создать демонстрационные адаптеры JSON и CSV.',
+    'Подготовить тестовые данные.',
+    'Реализовать журналирование основных операций.',
+    'Проверить базовое взаимодействие модулей.']},
+  { id:'d23', d:'2026-11-23', h:8, t:'Обработка данных поставщиков', s:[
+    'Реализовать обработку XML и YML.',
+    'Подготовить реальный адаптер, если доступность источника подтверждена.',
+    'Реализовать нормализацию полученных данных.',
+    'Проверить корректность преобразования данных.',
+    'Начать разработку frontend.']},
+  { id:'d24', d:'2026-11-24', h:8, t:'Реализация сопоставления товаров', s:[
+    'Реализовать алгоритм сопоставления товаров.',
+    'Добавить проверку наличия.',
+    'Реализовать проверку количества.',
+    'Учесть упаковки и единицы измерения.',
+    'Подготовить тесты алгоритма сопоставления.',
+    'Реализовать пользовательский интерфейс корзины.']},
+  { id:'d25', d:'2026-11-25', h:8, t:'Расчёт стоимости и первый закупочный вариант', ms:'25 ноября: работает основная цепочка от получения данных до расчёта первого закупочного варианта.', s:[
+    'Реализовать расчёт полной стоимости.',
+    'Учесть стоимость доставки.',
+    'Реализовать первую модель формирования закупочного варианта.',
+    'Проверить корректность расчётов.',
+    'Провести тестирование основных сценариев.',
+    'Завершить основной функционал корзины.']},
+  { id:'d26', d:'2026-11-26', h:8, t:'Реализация альтернативных вариантов', ms:'26–27 ноября: реализованы альтернативные варианты и экран результатов.', s:[
+    'Реализовать вторую модель.',
+    'Реализовать третью модель.',
+    'Подготовить API результатов оптимизации.',
+    'Реализовать запуск поиска и оптимизации на frontend.',
+    'Проверить передачу данных между модулями.',
+    'Подготовить очередные слайды презентации.']},
+  { id:'d27', d:'2026-11-27', h:8, t:'Экран результатов и сквозной сценарий', ms:'26–27 ноября: реализованы альтернативные варианты и экран результатов.', s:[
+    'Разработать экран результатов.',
+    'Отобразить варианты закупки.',
+    'Добавить сравнение итоговой стоимости.',
+    'Проверить отображение доставки и дополнительных расходов.',
+    'Адаптировать интерфейс для мобильных устройств.',
+    'Провести полный сквозной тест: от корзины до результатов.',
+    'Подготовить предварительную оценку эффективности.']},
+  { id:'d28', d:'2026-11-28', h:8.5, t:'Тестирование и исправления', ms:'28 ноября: завершено основное тестирование, исправлены ошибки, функциональность зафиксирована.', s:[
+    'Провести функциональное тестирование.',
+    'Проверить корректность сопоставления.',
+    'Проверить расчёт полной стоимости.',
+    'Проверить обработку отсутствующих товаров и недостаточного количества.',
+    'Исправить найденные ошибки.',
+    'Подготовить оценку эффективности.',
+    'Завершить соответствующие подразделы пояснительной записки.',
+    'Подготовить приложение Ж.',
+    'Зафиксировать функциональность первой версии.']},
+  { id:'d29', d:'2026-11-29', h:8.5, t:'Завершение пояснительной записки и презентации', ms:'29 ноября: подготовлены черновики пояснительной записки и презентации.', s:[
+    'Завершить подразделы 2.3.8–2.3.13.',
+    'Подготовить раздел 2.4.',
+    'Отредактировать введение и заключение.',
+    'Подготовить приложения А–Е.',
+    'Завершить черновик презентации.',
+    'Проверить соответствие пояснительной записки фактически реализованному функционалу.',
+    'Проверить оформление и структуру документа.']},
+  { id:'d30', d:'2026-11-30', h:7.5, t:'Финальная подготовка к защите', ms:'30 ноября: завершена финальная подготовка к защите.', s:[
+    'Проверить список источников.',
+    'Проверить оформление пояснительной записки.',
+    'Провести итоговую вычитку документа.',
+    'Завершить презентацию.',
+    'Подготовить речь для защиты.',
+    'Провести репетицию выступления.',
+    'Проверить демонстрацию работающего сервиса.',
+    'Подготовить запасной вариант демонстрации на случай технических проблем.',
+    'Подготовить ответы на возможные вопросы комиссии.']}
+];
+
+const stagesDef = [
+  { name:'Исследование и аналитика', range:'8–13 нояб.', from:'2026-11-08', to:'2026-11-13' },
+  { name:'Данные и модели оптимизации', range:'14–18 нояб.', from:'2026-11-14', to:'2026-11-18' },
+  { name:'Проектирование', range:'19–21 нояб.', from:'2026-11-19', to:'2026-11-21' },
+  { name:'Разработка', range:'22–27 нояб.', from:'2026-11-22', to:'2026-11-27' },
+  { name:'Тестирование и защита', range:'28–30 нояб.', from:'2026-11-28', to:'2026-11-30' }
+];
+
+/* ============ Даты (локальная системная дата устройства) ============ */
+const STORAGE_KEY = 'procurement_planner_full_v2';
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const pad = n => String(n).padStart(2, '0');
+function todayStr(){ const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+function parseD(s){ const p = s.split('-').map(Number); return Date.UTC(p[0], p[1]-1, p[2]); }
+function addDays(s, n){ const d = new Date(parseD(s) + n*864e5); return d.getUTCFullYear() + '-' + pad(d.getUTCMonth()+1) + '-' + pad(d.getUTCDate()); }
+function diffDays(a, b){ return Math.round((parseD(a) - parseD(b)) / 864e5); }
+function fmtLong(s){ return new Date(parseD(s)).toLocaleDateString('ru-RU', { day:'numeric', month:'long', timeZone:'UTC' }); }
+function fmtFull(s){ return new Date(parseD(s)).toLocaleDateString('ru-RU', { weekday:'long', day:'numeric', month:'long', year:'numeric', timeZone:'UTC' }); }
+function monShort(s){ return new Date(parseD(s)).toLocaleDateString('ru-RU', { month:'short', timeZone:'UTC' }).replace('.', ''); }
+function dayNum(s){ return Number(s.slice(8)); }
+
+/* ============ Состояние и хранилище ============ */
+const planById = {}; plan.forEach(p => planById[p.id] = p);
+
+function normStatus(v){
+  if (v === 'done' || v === 'completed') return 'done';
+  if (v === 'progress' || v === 'inprogress' || v === 'in_progress' || v === 'in-progress' || v === 'doing') return 'progress';
+  return 'todo';
+}
+
+// Безопасная миграция: сохраняем статусы, подзадачи, заметки, даты; неизвестные записи уходят в legacy, а не удаляются
+function normalize(raw){
+  const st = { schema: 3, lastCheck: null, tasks: {}, legacy: {} };
+  if (raw && typeof raw === 'object'){
+    if (typeof raw.lastCheck === 'string' && DATE_RE.test(raw.lastCheck)) st.lastCheck = raw.lastCheck;
+    if (raw.legacy && typeof raw.legacy === 'object') st.legacy = raw.legacy;
+  }
+  const old = (raw && raw.tasks && typeof raw.tasks === 'object' && !Array.isArray(raw.tasks)) ? raw.tasks : {};
+  plan.forEach(p => {
+    const o = (old[p.id] && typeof old[p.id] === 'object') ? old[p.id] : {};
+    st.tasks[p.id] = {
+      status: normStatus(o.status),
+      subs: p.s.map((_, i) => Array.isArray(o.subs) ? !!o.subs[i] : false),
+      notes: typeof o.notes === 'string' ? o.notes : '',
+      origDate: p.d,
+      date: (typeof o.date === 'string' && DATE_RE.test(o.date)) ? o.date : p.d
+    };
+  });
+  Object.keys(old).forEach(k => { if (!planById[k]) st.legacy[k] = old[k]; });
+  return st;
+}
+
+function loadState(){
+  let raw = null;
+  try { raw = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) {}
+  return normalize(raw);
+}
+function saveState(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+let state = loadState();
+
+/* ============ Автоматический перенос задач ============ */
+// Все незавершённые задачи, чья дата уже прошла, переносятся вперёд по порядку на ближайшие свободные дни,
+// начиная с сегодняшнего. Расписание при необходимости продлевается за 30 ноября — ничего не теряется.
+// Функция идемпотентна: если просроченных задач нет, ничего не меняется (дубликаты невозможны).
+function shiftSchedule(today){
+  const tasks = state.tasks;
+  const overdue = plan.some(p => tasks[p.id].status !== 'done' && tasks[p.id].date < today);
+  let changed = state.lastCheck !== today;
+  state.lastCheck = today;
+  if (overdue){
+    const taken = new Set();
+    plan.forEach(p => { const t = tasks[p.id]; if (t.status === 'done' && t.date >= today) taken.add(t.date); });
+    let cursor = today;
+    plan.forEach(p => {
+      const t = tasks[p.id];
+      if (t.status === 'done') return;
+      while (taken.has(cursor)) cursor = addDays(cursor, 1);
+      t.date = cursor;
+      taken.add(cursor);
+      cursor = addDays(cursor, 1);
+    });
+    changed = true;
+  }
+  if (changed) saveState();
+  return overdue;
+}
+
+function checkMidnight(){
+  const today = todayStr();
+  const dayChanged = state.lastCheck !== today;
+  const moved = shiftSchedule(today);
+  updateHeader();
+  if (dayChanged || moved) requestRender();
+}
+
+/* ============ Вычисления ============ */
+function taskProgress(id){
+  const t = state.tasks[id];
+  if (t.status === 'done') return 1;
+  return t.subs.length ? t.subs.filter(Boolean).length / t.subs.length : 0;
+}
+function calcTotals(){
+  let hAll = 0, hDone = 0, done = 0;
+  plan.forEach(p => { hAll += p.h; hDone += p.h * taskProgress(p.id); if (state.tasks[p.id].status === 'done') done++; });
+  return { pct: hAll ? hDone / hAll : 0, hAll, hDone, done };
+}
+function stageProgress(sd){
+  let hAll = 0, hDone = 0;
+  plan.forEach(p => { if (p.d >= sd.from && p.d <= sd.to){ hAll += p.h; hDone += p.h * taskProgress(p.id); } });
+  return hAll ? hDone / hAll : 0;
+}
+const fmtH = n => (Math.round(n * 10) / 10).toString().replace('.', ',');
+
+/* ============ Рендер ============ */
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const STATUS_LABEL = { todo:'Не начато', progress:'В работе', done:'Выполнено' };
+let activeTab = 'today';
+const openSet = new Set();
+let renderPending = false;
+
+function cardHTML(p, expanded, collapsible){
+  const t = state.tasks[p.id];
+  const today = todayStr();
+  const prog = Math.round(taskProgress(p.id) * 100);
+  const shift = diffDays(t.date, t.origDate);
+  const isToday = t.date === today;
+  const checked = t.subs.filter(Boolean).length;
+  let h = `<article class="task card ${isToday ? 'today' : ''} ${t.status === 'done' ? 'done-card' : ''} ${expanded && collapsible ? 'open' : ''}" data-id="${p.id}">`;
+  h += `<div class="p-4 sm:p-5 flex gap-4 items-start ${collapsible ? 'cursor-pointer' : ''}" ${collapsible ? 'data-act="toggle"' : ''}>
+    <div class="datebox"><b>${dayNum(t.date)}</b><span>${monShort(t.date)}</span></div>
+    <div class="flex-1 min-w-0">
+      <div class="flex flex-wrap gap-1.5 mb-1.5">
+        ${isToday ? '<span class="chip now">Сегодня</span>' : ''}
+        <span class="chip ${t.status}">${STATUS_LABEL[t.status]}</span>
+        ${shift !== 0 ? `<span class="chip moved">Перенесено с ${fmtLong(t.origDate)}${shift > 0 ? ' · +' + shift + ' дн.' : ''}</span>` : ''}
+        ${p.ms ? '<span class="chip ms">Контрольная точка</span>' : ''}
+      </div>
+      <h3 class="font-bold leading-snug">${esc(p.t)}</h3>
+      <div class="text-xs mt-1.5" style="color:var(--muted)">${fmtH(p.h)} ч · подзадачи ${checked}/${p.s.length} · ${prog}%</div>
+      <div class="bar mt-2 ${t.status === 'done' ? 'ok' : ''}"><i style="width:${prog}%"></i></div>
+    </div>
+    ${collapsible ? '<svg class="chev flex-none mt-1" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7488" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' : ''}
+  </div>`;
+  if (expanded){
+    h += `<div class="px-4 sm:px-5 pb-5 pt-1 border-t" style="border-color:var(--line)">`;
+    if (p.ms) h += `<div class="mt-3 text-sm rounded-xl px-3 py-2" style="background:#fdf2f8;color:#9d174d">🚩 ${esc(p.ms)}</div>`;
+    h += `<div class="mt-3">`;
+    p.s.forEach((s, i) => {
+      h += `<label class="sub ${t.subs[i] ? 'checked' : ''}"><input type="checkbox" data-act="sub" data-i="${i}" ${t.subs[i] ? 'checked' : ''}><span>${esc(s)}</span></label>`;
+    });
+    h += `</div><div class="flex flex-wrap gap-2 mt-4">`;
+    ['todo', 'progress', 'done'].forEach(s => {
+      h += `<button class="st-btn ${s} ${t.status === s ? 'on' : ''}" data-act="status" data-s="${s}">${STATUS_LABEL[s]}</button>`;
+    });
+    h += `</div><textarea class="note mt-4" data-act="notes" placeholder="Заметки к задаче…">${esc(t.notes)}</textarea></div>`;
+  }
+  return h + '</article>';
+}
+
+function sortedPlan(){
+  return plan.slice().sort((a, b) => {
+    const da = state.tasks[a.id].date, db = state.tasks[b.id].date;
+    return da < db ? -1 : da > db ? 1 : (a.d < b.d ? -1 : 1);
+  });
+}
+
+function renderViews(){
+  const today = todayStr();
+  const list = sortedPlan();
+  // Сегодня
+  const todays = list.filter(p => state.tasks[p.id].date === today);
+  const tv = document.getElementById('view-today');
+  if (todays.length){
+    tv.innerHTML = '<div class="space-y-3">' + todays.map(p => cardHTML(p, true, false)).join('') + '</div>';
+  } else {
+    const next = list.find(p => state.tasks[p.id].status !== 'done' && state.tasks[p.id].date > today);
+    if (next){
+      tv.innerHTML = `<div class="card p-5 mb-3 text-sm" style="color:var(--muted)">На сегодня задач нет. Ближайшая задача — ${fmtLong(state.tasks[next.id].date)}.</div>` + cardHTML(next, true, false);
+    } else {
+      tv.innerHTML = '<div class="card p-8 text-center"><div class="text-4xl mb-2">🎉</div><div class="font-bold">Все задачи выполнены</div></div>';
+    }
+  }
+  // Расписание
+  document.getElementById('view-schedule').innerHTML = list.map(p => cardHTML(p, openSet.has(p.id), true)).join('');
+}
+
+function updateSummary(){
+  const T = calcTotals();
+  const pct = Math.round(T.pct * 100);
+  document.getElementById('pct').textContent = pct + '%';
+  document.getElementById('donut').style.strokeDashoffset = (314.16 * (1 - T.pct)).toFixed(2);
+  document.getElementById('statDone').textContent = T.done;
+  document.getElementById('statAll').textContent = plan.length;
+  document.getElementById('statHours').textContent = fmtH(T.hDone);
+  document.getElementById('statHoursAll').textContent = fmtH(T.hAll);
+  stagesDef.forEach((sd, i) => {
+    const v = stageProgress(sd), p = Math.round(v * 100);
+    document.getElementById('stg-bar-' + i).style.width = p + '%';
+    document.getElementById('stg-bar-' + i).parentElement.classList.toggle('ok', p === 100);
+    document.getElementById('stg-pct-' + i).textContent = p + '%';
+  });
+}
+
+function updateHeader(){
+  document.getElementById('todayLabel').textContent = 'Сегодня: ' + fmtFull(todayStr());
+}
+
+function render(){
+  renderPending = false;
+  renderViews();
+  updateSummary();
+}
+function requestRender(){
+  const a = document.activeElement;
+  if (a && a.tagName === 'TEXTAREA') { renderPending = true; return; }
+  render();
+}
+
+/* ============ События ============ */
+function applyTab(){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === activeTab));
+  document.getElementById('view-today').classList.toggle('hidden', activeTab !== 'today');
+  document.getElementById('view-schedule').classList.toggle('hidden', activeTab !== 'schedule');
+}
+document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => { activeTab = b.dataset.tab; applyTab(); }));
+
+function onClick(e){
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const card = el.closest('[data-id]');
+  if (!card) return;
+  const id = card.dataset.id, act = el.dataset.act, t = state.tasks[id];
+  if (act === 'toggle'){
+    if (e.target.closest('textarea,input,label,button')) return;
+    openSet.has(id) ? openSet.delete(id) : openSet.add(id);
+    render();
+  } else if (act === 'status'){
+    t.status = el.dataset.s;
+    saveState(); render();
+  } else if (act === 'sub'){
+    t.subs[Number(el.dataset.i)] = el.checked;
+    const all = t.subs.every(Boolean), any = t.subs.some(Boolean);
+    if (all) t.status = 'done';
+    else if (t.status === 'done') t.status = 'progress';
+    else if (any && t.status === 'todo') t.status = 'progress';
+    saveState(); render();
+  }
+}
+['view-today', 'view-schedule'].forEach(id => {
+  const v = document.getElementById(id);
+  v.addEventListener('click', onClick);
+  v.addEventListener('input', e => {
+    if (e.target.dataset.act === 'notes'){
+      const card = e.target.closest('[data-id]');
+      state.tasks[card.dataset.id].notes = e.target.value;
+      saveState();
+    }
+  });
+  v.addEventListener('focusout', () => { setTimeout(() => { if (renderPending) requestRender(); }, 0); });
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (!confirm('Сбросить весь прогресс, статусы, подзадачи и заметки?')) return;
+  const legacy = state.legacy;
+  state = normalize(null);
+  state.legacy = legacy;
+  saveState();
+  openSet.clear();
+  checkMidnight();
+  render();
+});
+
+/* ============ Инициализация и автоматическая проверка даты ============ */
+stagesDef.forEach((sd, i) => {
+  document.getElementById('stages').insertAdjacentHTML('beforeend', `
+    <div>
+      <div class="flex justify-between text-sm mb-1"><span class="font-semibold">${i + 1}. ${sd.name} <span class="font-normal" style="color:var(--muted)">· ${sd.range}</span></span><span id="stg-pct-${i}" class="font-bold">0%</span></div>
+      <div class="bar"><i id="stg-bar-${i}" style="width:0%"></i></div>
+    </div>`);
+});
+
+applyTab();
+updateHeader();
+checkMidnight();   // при первом открытии / после долгого перерыва
+render();
+setInterval(checkMidnight, 10000);                          // каждые 10 секунд
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkMidnight(); });  // возврат на вкладку
+window.addEventListener('focus', checkMidnight);
+window.addEventListener('pageshow', checkMidnight);
+window.addEventListener('storage', e => {                    // синхронизация между вкладками
+  if (e.key === STORAGE_KEY){ state = loadState(); checkMidnight(); render(); }
+});
+</script>
+</body>
+</html>
