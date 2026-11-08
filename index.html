@@ -1,574 +1,1764 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Планировщик: сервис оптимизации закупок</title>
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<title>Планировщик проекта</title>
+
 <style>
-  :root{
-    --bg:#f4f6fb; --card:#ffffff; --ink:#1e2433; --muted:#6b7488; --line:#e4e8f1;
-    --accent:#4f46e5; --accent-soft:#eef0ff; --ok:#059669; --ok-soft:#e7f8f1;
-    --warn:#d97706; --warn-soft:#fff4e0;
-  }
-  html{scroll-behavior:smooth}
-  body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 1px 2px rgba(20,28,60,.04),0 6px 20px rgba(20,28,60,.04)}
-  .tab-btn{padding:.55rem 1.1rem;border-radius:999px;font-weight:600;font-size:.9rem;color:var(--muted);transition:all .2s}
-  .tab-btn:hover{color:var(--ink)}
-  .tab-btn.active{background:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(79,70,229,.3)}
-  .bar{height:8px;border-radius:99px;background:#eceff7;overflow:hidden}
-  .bar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#6366f1,#8b5cf6);transition:width .6s ease}
-  .bar.ok>i{background:linear-gradient(90deg,#10b981,#34d399)}
-  .donut-fg{transition:stroke-dashoffset .8s ease}
-  .task{transition:box-shadow .2s,transform .2s,opacity .2s;animation:fadeIn .35s ease both}
-  .task:hover{box-shadow:0 8px 26px rgba(20,28,60,.09)}
-  .task.today{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,70,229,.12)}
-  .task.done-card{opacity:.82}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  .chip{display:inline-flex;align-items:center;gap:.25rem;font-size:.72rem;font-weight:600;padding:.18rem .55rem;border-radius:99px;white-space:nowrap}
-  .chip.todo{background:#eef0f5;color:#5b6478}
-  .chip.progress{background:var(--accent-soft);color:var(--accent)}
-  .chip.done{background:var(--ok-soft);color:var(--ok)}
-  .chip.moved{background:var(--warn-soft);color:var(--warn)}
-  .chip.now{background:var(--accent);color:#fff}
-  .chip.ms{background:#fdf2f8;color:#be185d}
-  .datebox{min-width:56px;text-align:center;border-radius:14px;background:var(--accent-soft);color:var(--accent);padding:.4rem .3rem;line-height:1.1}
-  .datebox b{display:block;font-size:1.35rem}
-  .datebox span{font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
-  .st-btn{border:1px solid var(--line);border-radius:10px;padding:.4rem .8rem;font-size:.82rem;font-weight:600;color:var(--muted);background:#fff;transition:all .15s}
-  .st-btn:hover{border-color:var(--accent);color:var(--accent)}
-  .st-btn.on.todo{background:#eef0f5;color:#3b4357;border-color:#cfd5e3}
-  .st-btn.on.progress{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .st-btn.on.done{background:var(--ok);color:#fff;border-color:var(--ok)}
-  .sub{display:flex;gap:.6rem;align-items:flex-start;padding:.35rem .25rem;border-radius:8px;cursor:pointer;font-size:.92rem;line-height:1.4}
-  .sub:hover{background:#f6f7fb}
-  .sub input{margin-top:.2rem;width:1.05rem;height:1.05rem;accent-color:var(--accent);flex:none;cursor:pointer}
-  .sub.checked span{color:var(--muted);text-decoration:line-through}
-  textarea.note{width:100%;min-height:78px;border:1px solid var(--line);border-radius:12px;padding:.65rem .8rem;font:inherit;font-size:.9rem;resize:vertical;background:#fbfcfe;outline:none;transition:border .15s,box-shadow .15s}
-  textarea.note:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,70,229,.12);background:#fff}
-  .chev{transition:transform .2s}
-  .open .chev{transform:rotate(180deg)}
+:root {
+  --bg: #f7f5f0;
+  --card: #ffffff;
+  --ink: #292722;
+  --muted: #858078;
+  --line: #eae6df;
+  --accent: #d97745;
+  --accent-dark: #bd6034;
+  --accent-soft: #fdf0e8;
+  --green: #39866a;
+  --green-soft: #eaf5ef;
+  --yellow: #b77930;
+  --yellow-soft: #fbf2e4;
+  --gray-soft: #f2f0ec;
+  --shadow: 0 3px 14px rgba(55, 43, 29, .045);
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Inter, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, textarea { font: inherit; }
+
+button { cursor: pointer; }
+
+.container {
+  max-width: 1120px;
+  margin: auto;
+  padding: 28px 22px 55px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+h1 {
+  font-size: 29px;
+  letter-spacing: -.8px;
+  margin: 0;
+  font-weight: 750;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 7px;
+}
+
+.today-label {
+  color: var(--accent-dark);
+  font-size: 13px;
+  font-weight: 650;
+  margin-top: 12px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  box-shadow: var(--shadow);
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: 310px 1fr;
+  gap: 15px;
+  margin-bottom: 22px;
+}
+
+.summary-card { padding: 20px; }
+
+.progress-main {
+  display: flex;
+  align-items: center;
+  gap: 19px;
+}
+
+.donut-wrap {
+  width: 112px;
+  height: 112px;
+  position: relative;
+  flex: none;
+}
+
+.donut-wrap svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.donut-bg {
+  fill: none;
+  stroke: #f0ece6;
+  stroke-width: 10;
+}
+
+.donut-value {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset .5s;
+}
+
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.donut-center strong {
+  font-size: 27px;
+  letter-spacing: -1px;
+}
+
+.donut-center span {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.stats {
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.stats span { color: var(--muted); }
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.stage-list {
+  display: grid;
+  gap: 13px;
+}
+
+.stage-item {
+  display: grid;
+  grid-template-columns: 145px 1fr 35px;
+  gap: 12px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.stage-name {
+  color: #625e57;
+  line-height: 1.35;
+}
+
+.bar {
+  height: 7px;
+  background: #f0ede8;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: inherit;
+  transition: width .4s;
+}
+
+.stage-percent {
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Навигация по датам */
+
+.date-navigation {
+  margin-bottom: 18px;
+  padding: 14px 15px;
+}
+
+.date-navigation-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.date-navigation-top strong {
+  font-size: 14px;
+}
+
+.date-navigation-top span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dates {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 2px 2px 7px;
+  scrollbar-width: thin;
+}
+
+.date-btn {
+  min-width: 43px;
+  height: 52px;
+  border: 1px solid transparent;
+  background: #f7f5f1;
+  border-radius: 11px;
+  color: #625e57;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  transition: .15s;
+}
+
+.date-btn b {
+  font-size: 15px;
+}
+
+.date-btn small {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: #99938a;
+}
+
+.date-btn:hover {
+  border-color: #e5b89f;
+  background: var(--accent-soft);
+}
+
+.date-btn.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  box-shadow: 0 3px 9px rgba(217,119,69,.2);
+}
+
+.date-btn.active small { color: #fff1e8; }
+
+.date-btn.completed::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  position: absolute;
+  margin-top: 44px;
+}
+
+.date-btn { position: relative; }
+
+.date-btn.active.completed::after { background: white; }
+
+.nav-arrows {
+  display: flex;
+  gap: 7px;
+}
+
+.nav-arrow {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 9px;
+  width: 32px;
+  height: 30px;
+  color: var(--muted);
+}
+
+.nav-arrow:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Выбранный день */
+
+.day-card {
+  padding: 23px;
+  min-height: 300px;
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 15px;
+  margin-bottom: 22px;
+}
+
+.day-date {
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 7px;
+}
+
+.day-title {
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -.4px;
+  line-height: 1.3;
+}
+
+.day-description {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 7px;
+  line-height: 1.5;
+}
+
+.hours {
+  white-space: nowrap;
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  border-radius: 9px;
+  padding: 8px 11px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.day-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 21px;
+}
+
+.day-progress .bar { flex: 1; }
+
+.day-progress-text {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.task-list {
+  display: grid;
+  gap: 12px;
+}
+
+.task {
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  overflow: hidden;
+  transition: .2s;
+}
+
+.task:hover {
+  border-color: #e5c5b3;
+}
+
+.task.done { background: #fcfdfb; }
+
+.task-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px;
+}
+
+.task-check {
+  width: 19px;
+  height: 19px;
+  accent-color: var(--accent);
+  flex: none;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.task-content { flex: 1; min-width: 0; }
+
+.task-title {
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 650;
+}
+
+.task.done .task-title {
+  color: #8a938b;
+  text-decoration: line-through;
+}
+
+.task-meta {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 5px;
+}
+
+.task-badge {
+  font-size: 10px;
+  border-radius: 20px;
+  padding: 4px 8px;
+  background: var(--gray-soft);
+  color: #777168;
+  white-space: nowrap;
+}
+
+.task-badge.moved {
+  color: var(--yellow);
+  background: var(--yellow-soft);
+}
+
+.subtasks {
+  border-top: 1px solid #f0ede8;
+  padding: 10px 15px 13px 44px;
+  display: grid;
+  gap: 8px;
+}
+
+.subtask {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #57534d;
+  cursor: pointer;
+}
+
+.subtask input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+  flex: none;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.subtask.checked span {
+  color: #aaa49a;
+  text-decoration: line-through;
+}
+
+.note-block {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.note-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 9px;
+}
+
+.note {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  background: #fcfbf9;
+  border-radius: 11px;
+  padding: 11px 12px;
+  color: var(--ink);
+  font-size: 13px;
+  outline: none;
+}
+
+.note:focus {
+  border-color: #dda17e;
+  box-shadow: 0 0 0 3px rgba(217,119,69,.09);
+}
+
+.note::placeholder { color: #aaa49a; }
+
+.day-result {
+  margin-top: 17px;
+  padding: 13px 15px;
+  background: #faf7f2;
+  border-radius: 11px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #716a60;
+}
+
+.day-result strong { color: #4e4941; }
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.status-btn, .reset-btn {
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--muted);
+  border-radius: 9px;
+  padding: 8px 11px;
+  font-size: 11px;
+  font-weight: 650;
+  transition: .15s;
+}
+
+.status-btn:hover, .reset-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+
+.status-btn.active.todo {
+  background: var(--gray-soft);
+  color: #625d55;
+}
+
+.status-btn.active.progress {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.status-btn.active.done {
+  background: var(--green);
+  color: white;
+  border-color: var(--green);
+}
+
+.reset-btn { margin-left: auto; }
+
+.footer {
+  text-align: center;
+  color: #a29b91;
+  font-size: 11px;
+  margin-top: 25px;
+  line-height: 1.6;
+}
+
+.empty-message {
+  text-align: center;
+  color: var(--muted);
+  padding: 35px 15px;
+  font-size: 13px;
+}
+
+@media(max-width: 760px) {
+  .container { padding: 20px 13px 35px; }
+  h1 { font-size: 24px; }
+  header { align-items: center; }
+  .summary { grid-template-columns: 1fr; }
+  .stage-item { grid-template-columns: 115px 1fr 32px; }
+  .day-card { padding: 17px; }
+  .day-title { font-size: 18px; }
+  .task-top { padding: 12px; }
+  .subtasks { padding-left: 40px; }
+}
+
+@media(max-width: 420px) {
+  .hours { font-size: 10px; padding: 7px; }
+  .stage-item { grid-template-columns: 100px 1fr 29px; gap: 7px; }
+  .stage-name { font-size: 10px; }
+  .day-header { gap: 8px; }
+}
 </style>
 </head>
-<body class="min-h-screen">
-<div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
 
-  <header class="flex flex-wrap items-start justify-between gap-4 mb-6">
-    <div>
-      <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Планировщик проекта</h1>
-      <p class="text-sm sm:text-base mt-1" style="color:var(--muted)">Сервис оптимизации закупок строительных материалов · 8–30 ноября 2026</p>
-      <p id="todayLabel" class="text-sm mt-2 font-semibold" style="color:var(--accent)"></p>
+<body>
+<div class="container">
+
+<header>
+  <div>
+    <h1>Планировщик проекта</h1>
+    <div class="subtitle">
+      Сервис оптимизации закупок строительных материалов · Ноябрь 2026
     </div>
-    <button id="resetBtn" class="st-btn" style="padding:.55rem 1rem">Сбросить прогресс</button>
-  </header>
+    <div class="today-label" id="todayLabel"></div>
+  </div>
+  <button class="reset-btn" id="resetBtn">Сбросить прогресс</button>
+</header>
 
-  <!-- Сводка -->
-  <section class="grid md:grid-cols-3 gap-4 mb-6">
-    <div class="card p-5 flex items-center gap-5">
-      <div class="relative" style="width:128px;height:128px;flex:none">
-        <svg viewBox="0 0 120 120" width="128" height="128" style="transform:rotate(-90deg)">
-          <circle cx="60" cy="60" r="50" fill="none" stroke="#eceff7" stroke-width="12"/>
-          <circle id="donut" class="donut-fg" cx="60" cy="60" r="50" fill="none" stroke="url(#g)" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
-          <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+<section class="summary">
+
+  <div class="card summary-card">
+    <div class="progress-main">
+      <div class="donut-wrap">
+        <svg viewBox="0 0 120 120">
+          <circle class="donut-bg" cx="60" cy="60" r="49"></circle>
+          <circle class="donut-value" id="donut"
+            cx="60" cy="60" r="49"
+            stroke-dasharray="307.88"
+            stroke-dashoffset="307.88"></circle>
         </svg>
-        <div class="absolute inset-0 flex flex-col items-center justify-center">
-          <div id="pct" class="text-3xl font-extrabold">0%</div>
-          <div class="text-xs" style="color:var(--muted)">общий прогресс</div>
+        <div class="donut-center">
+          <strong id="pct">0%</strong>
+          <span>общий прогресс</span>
         </div>
       </div>
-      <div class="text-sm space-y-1">
-        <div><span style="color:var(--muted)">Выполнено задач:</span> <b id="statDone">0</b> / <b id="statAll">0</b></div>
-        <div><span style="color:var(--muted)">Часов:</span> <b id="statHours">0</b> / <b id="statHoursAll">0</b></div>
+
+      <div class="stats">
+        <div><span>Выполнено:</span> <b id="statDone">0</b> / <b id="statAll">0</b></div>
+        <div><span>Часов по плану:</span> <b id="statHours">0</b></div>
+        <div><span>Дней:</span> <b id="statDays">0</b> / 23</div>
       </div>
     </div>
-    <div class="card p-5 md:col-span-2">
-      <h2 class="font-bold mb-3">Прогресс по этапам</h2>
-      <div id="stages" class="space-y-3"></div>
+  </div>
+
+  <div class="card summary-card">
+    <div class="section-title">Прогресс по этапам</div>
+    <div class="stage-list" id="stages"></div>
+  </div>
+
+</section>
+
+<section class="card date-navigation">
+  <div class="date-navigation-top">
+    <div>
+      <strong>Календарь проекта</strong>
+      <span> · Выбери день для просмотра задач</span>
     </div>
-  </section>
+    <div class="nav-arrows">
+      <button class="nav-arrow" id="prevDay" title="Предыдущий день">‹</button>
+      <button class="nav-arrow" id="nextDay" title="Следующий день">›</button>
+    </div>
+  </div>
+  <div class="dates" id="dates"></div>
+</section>
 
-  <!-- Вкладки -->
-  <nav class="flex gap-2 mb-5 p-1 rounded-full w-fit" style="background:#e9ecf6">
-    <button class="tab-btn active" data-tab="today">Сегодня</button>
-    <button class="tab-btn" data-tab="schedule">Расписание</button>
-  </nav>
+<main id="dayView"></main>
 
-  <main>
-    <div id="view-today"></div>
-    <div id="view-schedule" class="hidden space-y-3"></div>
-  </main>
+<div class="footer">
+  Незавершённые подзадачи прошедших дней автоматически переносятся на следующий день.<br>
+  Прогресс и заметки сохраняются в браузере на этом устройстве.
+</div>
 
-  <footer class="text-center text-xs mt-10" style="color:var(--muted)">
-    Незавершённые задачи переносятся автоматически по системной дате устройства. Данные хранятся в вашем браузере.
-  </footer>
 </div>
 
 <script>
-/* ============ Расписание ============ */
+/* ===================================================
+   ПЛАН РАБОТЫ
+   =================================================== */
+
 const plan = [
-  { id:'d08', d:'2026-11-08', h:6.5, t:'Исследование процесса закупки и начало пояснительной записки', s:[
-    'Изучить процесс закупки строительных материалов и ресурсов.',
-    'Описать основные этапы закупочного процесса.',
-    'Определить участников процесса и их задачи.',
-    'Выявить основные проблемы при поиске и сравнении предложений поставщиков.',
-    'Начать написание раздела 1.1.',
-    'Создать реестр используемых источников.']},
-  { id:'d09', d:'2026-11-09', h:7, t:'Завершение исследования проблем закупки', s:[
-    'Завершить раздел 1.1.',
-    'Систематизировать проблемы поиска строительных товаров.',
-    'Изучить проблемы сравнения предложений разных поставщиков.',
-    'Рассмотреть влияние наличия, количества, характеристик и доставки на выбор предложения.',
-    'Подобрать официальные и надёжные источники, подтверждающие выявленные проблемы.']},
-  { id:'d10', d:'2026-11-10', h:7, t:'Исследование аналогов и существующих решений', s:[
-    'Найти существующие сервисы и программные решения для закупок.',
-    'Изучить электронные торговые площадки и каталоги поставщиков.',
-    'Рассмотреть возможности автоматизации поиска и сравнения товаров.',
-    'Начать раздел 1.2.',
-    'Зафиксировать преимущества и недостатки существующих решений.']},
-  { id:'d11', d:'2026-11-11', h:7.5, t:'Сравнение аналогов и завершение аналитической части', s:[
-    'Составить сравнительную таблицу аналогов.',
-    'Сравнить функциональность существующих решений.',
-    'Выявить недостатки аналогов относительно задач проекта.',
-    'Подготовить раздел 1.3.',
-    'Сформулировать выводы по первой главе.']},
-  { id:'d12', d:'2026-11-12', h:7.5, t:'Требования к разрабатываемому сервису', s:[
-    'Отредактировать первую главу.',
-    'Сформировать функциональные требования.',
-    'Сформировать нефункциональные требования.',
-    'Определить основные сценарии использования.',
-    'Сформировать перечень функций первой версии.',
-    'Определить ограничения проекта.']},
-  { id:'d13', d:'2026-11-13', h:8, t:'Исследование поставщиков и источников данных', ms:'13 ноября: первая глава завершена, исследование поставщиков начато.', s:[
-    'Изучить способы получения данных от поставщиков.',
-    'Исследовать доступность API и открытых выгрузок.',
-    'Рассмотреть форматы данных поставщиков.',
-    'Изучить ограничения использования данных.',
-    'Завершить первую главу пояснительной записки.',
-    'Начать подготовку презентации: слайды 1–5.']},
-  { id:'d14', d:'2026-11-14', h:7.5, t:'Форматы данных и способы интеграции', s:[
-    'Изучить CSV, JSON, XML, YML и другие возможные форматы.',
-    'Определить допустимые способы получения данных.',
-    'Разделить реальные интеграции и демонстрационные адаптеры.',
-    'Продумать единый формат представления предложений.',
-    'Зафиксировать ограничения каждого способа получения данных.']},
-  { id:'d15', d:'2026-11-15', h:7.5, t:'Формирование входных данных и условий закупки', s:[
-    'Определить структуру пользовательской корзины.',
-    'Определить обязательные характеристики товаров.',
-    'Сформировать правила проверки наличия.',
-    'Определить правила обработки количества и упаковок.',
-    'Продумать обработку замен товаров.',
-    'Подготовить раздел 2.1.']},
-  { id:'d16', d:'2026-11-16', h:7.5, t:'Модель расчёта полной стоимости', s:[
-    'Определить состав полной стоимости закупки.',
-    'Учесть стоимость товаров.',
-    'Учесть стоимость доставки.',
-    'Учесть обязательные дополнительные расходы.',
-    'Определить правила учёта скидок, предоставляемых поставщиками.',
-    'Продумать обработку неизвестных расходов.',
-    'Разработать первую модель формирования закупочного варианта.']},
-  { id:'d17', d:'2026-11-17', h:8, t:'Разработка альтернативных моделей оптимизации', s:[
-    'Разработать вторую модель оптимизации.',
-    'Разработать третью модель оптимизации.',
-    'Определить различия между моделями.',
-    'Подготовить контрольные примеры.',
-    'Выбрать предварительный технологический стек.',
-    'Зафиксировать обоснование выбора.']},
-  { id:'d18', d:'2026-11-18', h:8, t:'Проверка моделей и расчётов', ms:'18 ноября: проверены три модели оптимизации и ручные расчёты.', s:[
-    'Провести ручные расчёты контрольных примеров.',
-    'Проверить работу трёх моделей.',
-    'Сравнить полученные результаты.',
-    'Выявить возможные ошибки и неоднозначности.',
-    'Завершить разделы 2.1 и 2.2.',
-    'Подготовить следующие слайды презентации.']},
-  { id:'d19', d:'2026-11-19', h:8, t:'Проектирование архитектуры', s:[
-    'Разработать общую архитектуру сервиса.',
-    'Определить основные программные модули.',
-    'Продумать взаимодействие frontend и backend.',
-    'Определить API-контракты.',
-    'Спроектировать структуру базы данных.',
-    'Зафиксировать связи между основными сущностями.']},
-  { id:'d20', d:'2026-11-20', h:8, t:'Проектирование алгоритмов и интерфейса', s:[
-    'Разработать правила сопоставления товаров.',
-    'Продумать сравнение наименований и характеристик.',
-    'Определить правила проверки наличия и количества.',
-    'Продумать обработку частичных предложений.',
-    'Разработать предварительные макеты интерфейса.',
-    'Подготовить материалы для соответствующих подразделов главы 2.']},
-  { id:'d21', d:'2026-11-21', h:7, t:'Подготовка среды разработки', ms:'21 ноября: подготовлены проектирование, дизайн и среда разработки.', s:[
-    'Завершить основные макеты интерфейса.',
-    'Подготовить структуру проекта.',
-    'Настроить среду разработки.',
-    'Подготовить базу данных.',
-    'Реализовать начальную структуру backend.',
-    'Описать выбранные технологии в пояснительной записке.']},
-  { id:'d22', d:'2026-11-22', h:8, t:'Разработка серверной основы', s:[
-    'Реализовать слой работы с базой данных.',
-    'Реализовать API для пользовательской корзины.',
-    'Создать демонстрационные адаптеры JSON и CSV.',
-    'Подготовить тестовые данные.',
-    'Реализовать журналирование основных операций.',
-    'Проверить базовое взаимодействие модулей.']},
-  { id:'d23', d:'2026-11-23', h:8, t:'Обработка данных поставщиков', s:[
-    'Реализовать обработку XML и YML.',
-    'Подготовить реальный адаптер, если доступность источника подтверждена.',
-    'Реализовать нормализацию полученных данных.',
-    'Проверить корректность преобразования данных.',
-    'Начать разработку frontend.']},
-  { id:'d24', d:'2026-11-24', h:8, t:'Реализация сопоставления товаров', s:[
-    'Реализовать алгоритм сопоставления товаров.',
-    'Добавить проверку наличия.',
-    'Реализовать проверку количества.',
-    'Учесть упаковки и единицы измерения.',
-    'Подготовить тесты алгоритма сопоставления.',
-    'Реализовать пользовательский интерфейс корзины.']},
-  { id:'d25', d:'2026-11-25', h:8, t:'Расчёт стоимости и первый закупочный вариант', ms:'25 ноября: работает основная цепочка от получения данных до расчёта первого закупочного варианта.', s:[
-    'Реализовать расчёт полной стоимости.',
-    'Учесть стоимость доставки.',
-    'Реализовать первую модель формирования закупочного варианта.',
-    'Проверить корректность расчётов.',
-    'Провести тестирование основных сценариев.',
-    'Завершить основной функционал корзины.']},
-  { id:'d26', d:'2026-11-26', h:8, t:'Реализация альтернативных вариантов', ms:'26–27 ноября: реализованы альтернативные варианты и экран результатов.', s:[
-    'Реализовать вторую модель.',
-    'Реализовать третью модель.',
-    'Подготовить API результатов оптимизации.',
-    'Реализовать запуск поиска и оптимизации на frontend.',
-    'Проверить передачу данных между модулями.',
-    'Подготовить очередные слайды презентации.']},
-  { id:'d27', d:'2026-11-27', h:8, t:'Экран результатов и сквозной сценарий', ms:'26–27 ноября: реализованы альтернативные варианты и экран результатов.', s:[
-    'Разработать экран результатов.',
-    'Отобразить варианты закупки.',
-    'Добавить сравнение итоговой стоимости.',
-    'Проверить отображение доставки и дополнительных расходов.',
-    'Адаптировать интерфейс для мобильных устройств.',
-    'Провести полный сквозной тест: от корзины до результатов.',
-    'Подготовить предварительную оценку эффективности.']},
-  { id:'d28', d:'2026-11-28', h:8.5, t:'Тестирование и исправления', ms:'28 ноября: завершено основное тестирование, исправлены ошибки, функциональность зафиксирована.', s:[
-    'Провести функциональное тестирование.',
-    'Проверить корректность сопоставления.',
-    'Проверить расчёт полной стоимости.',
-    'Проверить обработку отсутствующих товаров и недостаточного количества.',
-    'Исправить найденные ошибки.',
-    'Подготовить оценку эффективности.',
-    'Завершить соответствующие подразделы пояснительной записки.',
-    'Подготовить приложение Ж.',
-    'Зафиксировать функциональность первой версии.']},
-  { id:'d29', d:'2026-11-29', h:8.5, t:'Завершение пояснительной записки и презентации', ms:'29 ноября: подготовлены черновики пояснительной записки и презентации.', s:[
-    'Завершить подразделы 2.3.8–2.3.13.',
-    'Подготовить раздел 2.4.',
-    'Отредактировать введение и заключение.',
-    'Подготовить приложения А–Е.',
-    'Завершить черновик презентации.',
-    'Проверить соответствие пояснительной записки фактически реализованному функционалу.',
-    'Проверить оформление и структуру документа.']},
-  { id:'d30', d:'2026-11-30', h:7.5, t:'Финальная подготовка к защите', ms:'30 ноября: завершена финальная подготовка к защите.', s:[
-    'Проверить список источников.',
-    'Проверить оформление пояснительной записки.',
-    'Провести итоговую вычитку документа.',
-    'Завершить презентацию.',
-    'Подготовить речь для защиты.',
-    'Провести репетицию выступления.',
-    'Проверить демонстрацию работающего сервиса.',
-    'Подготовить запасной вариант демонстрации на случай технических проблем.',
-    'Подготовить ответы на возможные вопросы комиссии.']}
-];
 
-const stagesDef = [
-  { name:'Исследование и аналитика', range:'8–13 нояб.', from:'2026-11-08', to:'2026-11-13' },
-  { name:'Данные и модели оптимизации', range:'14–18 нояб.', from:'2026-11-14', to:'2026-11-18' },
-  { name:'Проектирование', range:'19–21 нояб.', from:'2026-11-19', to:'2026-11-21' },
-  { name:'Разработка', range:'22–27 нояб.', from:'2026-11-22', to:'2026-11-27' },
-  { name:'Тестирование и защита', range:'28–30 нояб.', from:'2026-11-28', to:'2026-11-30' }
-];
+{
+  id:"d08",
+  date:"2026-11-08",
+  hours:4,
+  stage:"Готово",
+  title:"Выполненные разделы пояснительной записки",
+  description:"Уже выполненная работа. Используется как начальная точка отсчёта.",
+  result:"Введение и основные аналитические разделы первой главы подготовлены.",
+  tasks:[
+    {id:"intro",title:"Написание введения",done:true,subs:[
+      "Обоснование актуальности проекта.",
+      "Формулировка проблемы и цели работы.",
+      "Определение объекта, предмета и задач."
+    ]},
+    {id:"p11",title:"Раздел 1.1. Особенности организации процесса закупки",done:true,subs:[
+      "Описание этапов закупки строительных товаров.",
+      "Описание участников закупочного процесса."
+    ]},
+    {id:"p12",title:"Раздел 1.2. Анализ проблем закупки",done:true,subs:[
+      "Выявление основных проблем поиска и сравнения предложений.",
+      "Систематизация проблем и их последствий."
+    ]},
+    {id:"p13",title:"Раздел 1.3. Анализ рынка IT-решений",done:true,subs:[
+      "Изучение существующих решений.",
+      "Сравнение возможностей и ограничений аналогов."
+    ]}
+  ]
+},
 
-/* ============ Даты (локальная системная дата устройства) ============ */
-const STORAGE_KEY = 'procurement_planner_full_v2';
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const pad = n => String(n).padStart(2, '0');
-function todayStr(){ const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
-function parseD(s){ const p = s.split('-').map(Number); return Date.UTC(p[0], p[1]-1, p[2]); }
-function addDays(s, n){ const d = new Date(parseD(s) + n*864e5); return d.getUTCFullYear() + '-' + pad(d.getUTCMonth()+1) + '-' + pad(d.getUTCDate()); }
-function diffDays(a, b){ return Math.round((parseD(a) - parseD(b)) / 864e5); }
-function fmtLong(s){ return new Date(parseD(s)).toLocaleDateString('ru-RU', { day:'numeric', month:'long', timeZone:'UTC' }); }
-function fmtFull(s){ return new Date(parseD(s)).toLocaleDateString('ru-RU', { weekday:'long', day:'numeric', month:'long', year:'numeric', timeZone:'UTC' }); }
-function monShort(s){ return new Date(parseD(s)).toLocaleDateString('ru-RU', { month:'short', timeZone:'UTC' }).replace('.', ''); }
-function dayNum(s){ return Number(s.slice(8)); }
+{
+  id:"d09",
+  date:"2026-11-09",
+  hours:3.5,
+  stage:"Глава 1",
+  title:"Завершение первой главы и анализ аналогов",
+  description:"Проверяем готовые разделы и формируем общий вывод по аналитической части.",
+  result:"Полностью завершённая первая глава с выводом и оформленными источниками.",
+  tasks:[
+    {id:"a1",title:"Проверить и завершить первую главу",subs:[
+      "Проверить логическую связь между пунктами 1.1, 1.2 и 1.3.",
+      "Устранить повторы и противоречия.",
+      "Проверить соответствие содержания теме проекта."
+    ]},
+    {id:"a2",title:"Оформить выводы по первой главе",subs:[
+      "Сформулировать основные результаты анализа.",
+      "Обосновать необходимость разработки собственного сервиса."
+    ]},
+    {id:"a3",title:"Проверить источники и сноски",subs:[
+      "Сверить ссылки с использованными материалами.",
+      "Добавить недостающие библиографические сведения."
+    ]}
+  ]
+},
 
-/* ============ Состояние и хранилище ============ */
-const planById = {}; plan.forEach(p => planById[p.id] = p);
+{
+  id:"d10",
+  date:"2026-11-10",
+  hours:3.5,
+  stage:"Исследование поставщиков",
+  title:"Поиск потенциальных поставщиков и способов подключения",
+  description:"Первый день исследования. Пока не пытаемся программировать интеграции — выясняем, какие источники данных существуют.",
+  result:"Список из 5–8 потенциальных поставщиков с предварительной информацией об их способах обмена данными.",
+  tasks:[
+    {id:"b1",title:"Найти потенциальных поставщиков строительных товаров",subs:[
+      "Подобрать 5–8 крупных или региональных поставщиков.",
+      "Проверить ассортимент и наличие нужных категорий товаров.",
+      "Зафиксировать сайты и контактные страницы."
+    ]},
+    {id:"b2",title:"Проверить наличие технических способов получения данных",subs:[
+      "Найти открытые API и документацию, если они доступны.",
+      "Проверить наличие B2B-кабинетов и партнёрских интерфейсов.",
+      "Выяснить, доступны ли прайс-листы или выгрузки CSV, Excel, XML, YML.",
+      "Отметить поставщиков, у которых публичного интерфейса нет."
+    ]},
+    {id:"b3",title:"Составить предварительную таблицу поставщиков",subs:[
+      "Название и сайт поставщика.",
+      "Предполагаемый способ получения данных.",
+      "Наличие документации и условия доступа."
+    ]}
+  ]
+},
 
-function normStatus(v){
-  if (v === 'done' || v === 'completed') return 'done';
-  if (v === 'progress' || v === 'inprogress' || v === 'in_progress' || v === 'in-progress' || v === 'doing') return 'progress';
-  return 'todo';
+{
+  id:"d11",
+  date:"2026-11-11",
+  hours:4,
+  stage:"Исследование поставщиков",
+  title:"Изучение документации и проверка доступа к данным",
+  description:"Самый технически насыщенный день исследования. Изучаем реальные условия работы с источниками.",
+  result:"Выбраны 2–3 наиболее перспективных источника. По возможности получены тестовые данные или проверен хотя бы один реальный запрос.",
+  tasks:[
+    {id:"c1",title:"Изучить документацию перспективных поставщиков",subs:[
+      "Проверить, какие данные возвращает интерфейс.",
+      "Изучить требования к авторизации и получению доступа.",
+      "Проверить ограничения запросов и условия использования.",
+      "Выяснить, предоставляется ли информация о наличии и количестве."
+    ]},
+    {id:"c2",title:"Попробовать получить тестовый доступ",subs:[
+      "Проверить возможность регистрации разработчика или партнёра.",
+      "При необходимости отправить запрос поставщику.",
+      "Попробовать выполнить тестовый запрос, если доступ открыт.",
+      "Сохранить пример ответа или тестовую выгрузку."
+    ]},
+    {id:"c3",title:"Зафиксировать ограничения",subs:[
+      "Отметить закрытые API и необходимость договора.",
+      "Разделить реально доступные данные и предположения.",
+      "Определить, какие источники можно использовать в демонстрационной версии."
+    ]}
+  ]
+},
+
+{
+  id:"d12",
+  date:"2026-11-12",
+  hours:3.5,
+  stage:"Исследование поставщиков",
+  title:"Сравнение способов получения данных и написание пункта 2.1",
+  description:"Завершаем исследование. Получение нескольких API-ключей не является обязательным условием.",
+  result:"Готовый пункт 2.1 с обоснованием выбранного способа получения данных и описанием ограничений.",
+  tasks:[
+    {id:"d1",title:"Сравнить исследованные источники",subs:[
+      "Сопоставить API, B2B-интерфейсы, выгрузки и ручные демонстрационные данные.",
+      "Оценить доступность цен, наличия, количества и доставки.",
+      "Выбрать наиболее реалистичные способы интеграции."
+    ]},
+    {id:"d2",title:"Определить подход к первой версии",subs:[
+      "Зафиксировать реально доступный источник данных.",
+      "Определить формат тестовых данных для недоступных поставщиков.",
+      "Продумать единый формат предложений от разных источников."
+    ]},
+    {id:"d3",title:"Написать пункт 2.1",subs:[
+      "Описать исследованные способы получения информации.",
+      "Привести результаты сравнения.",
+      "Обосновать выбранный подход и его ограничения.",
+      "Добавить ссылки на документацию и источники."
+    ]}
+  ]
+},
+
+{
+  id:"d13",
+  date:"2026-11-13",
+  hours:3.5,
+  stage:"Математическая модель",
+  title:"Определение входных данных и переменных модели",
+  description:"Начинаем математически описывать задачу закупки.",
+  result:"Определены переменные, исходные данные и основные ограничения математической модели.",
+  tasks:[
+    {id:"e1",title:"Определить входные данные",subs:[
+      "Список требуемых товаров.",
+      "Количество и единицы измерения.",
+      "Характеристики товаров.",
+      "Предложения поставщиков, цены и доступные количества.",
+      "Данные о доставке и обязательных расходах."
+    ]},
+    {id:"e2",title:"Ввести математические обозначения",subs:[
+      "Обозначить товары и поставщиков индексами.",
+      "Определить переменные количества закупаемого товара.",
+      "Определить параметры стоимости и доступного количества."
+    ]},
+    {id:"e3",title:"Сформулировать ограничения",subs:[
+      "Закупка должна полностью покрывать потребность.",
+      "Количество не должно превышать доступное наличие.",
+      "Не допускается закупка неподходящих товаров.",
+      "Необходимо учитывать целые упаковки, если это требуется."
+    ]}
+  ]
+},
+
+{
+  id:"d14",
+  date:"2026-11-14",
+  hours:3.5,
+  stage:"Математическая модель",
+  title:"Модель минимальной совокупной стоимости",
+  description:"Разрабатываем первый вариант оптимизации закупки.",
+  result:"Сформулирована модель поиска минимальной полной стоимости закупки.",
+  tasks:[
+    {id:"f1",title:"Определить состав полной стоимости",subs:[
+      "Стоимость приобретаемых товаров.",
+      "Стоимость доставки.",
+      "Подтверждённые поставщиком скидки.",
+      "Обязательные дополнительные расходы."
+    ]},
+    {id:"f2",title:"Сформулировать целевую функцию",subs:[
+      "Описать расчёт стоимости закупки.",
+      "Добавить расходы на доставку.",
+      "Учесть подтверждённые скидки и дополнительные расходы.",
+      "Определить условие минимизации общей стоимости."
+    ]},
+    {id:"f3",title:"Разобрать пример",subs:[
+      "Составить небольшой список товаров.",
+      "Задать несколько предложений поставщиков.",
+      "Показать, как выбирается минимальная стоимость."
+    ]}
+  ]
+},
+
+{
+  id:"d15",
+  date:"2026-11-15",
+  hours:4,
+  stage:"Математическая модель",
+  title:"Две альтернативные модели и завершение пункта 2.2",
+  description:"Формируем оставшиеся варианты закупки и проверяем согласованность моделей.",
+  result:"Завершён пункт 2.2 с описанием трёх вариантов оптимизации.",
+  tasks:[
+    {id:"g1",title:"Разработать модель закупки у одного поставщика",subs:[
+      "Определить условие полного покрытия потребности одним поставщиком.",
+      "Описать ситуацию, когда такой вариант невозможен.",
+      "Сформулировать критерий выбора поставщика."
+    ]},
+    {id:"g2",title:"Разработать сбалансированную модель",subs:[
+      "Определить компромисс между стоимостью и количеством заказов.",
+      "Продумать способ оценки числа поставщиков.",
+      "Описать принцип выбора сбалансированного решения."
+    ]},
+    {id:"g3",title:"Завершить математическую модель",subs:[
+      "Свести три модели в единую систему.",
+      "Проверить формулы на примерах.",
+      "Написать пункт 2.2 и оформить обозначения."
+    ]}
+  ]
+},
+
+{
+  id:"d16",
+  date:"2026-11-16",
+  hours:3.5,
+  stage:"Проектирование",
+  title:"Назначение, требования и границы первой версии",
+  description:"Переходим к проектированию будущего сервиса.",
+  result:"Подготовлен пункт 2.3.1 с назначением, требованиями и ограничениями.",
+  tasks:[
+    {id:"h1",title:"Определить назначение сервиса",subs:[
+      "Описать проблему, которую решает сервис.",
+      "Определить целевую аудиторию.",
+      "Описать основной результат работы пользователя."
+    ]},
+    {id:"h2",title:"Сформировать функциональные требования",subs:[
+      "Ввод списка товаров и характеристик.",
+      "Получение и сопоставление предложений.",
+      "Проверка наличия и количества.",
+      "Расчёт полной стоимости.",
+      "Формирование трёх вариантов закупки."
+    ]},
+    {id:"h3",title:"Сформировать нефункциональные требования",subs:[
+      "Понятный интерфейс.",
+      "Корректность расчётов.",
+      "Обработка недоступных источников данных.",
+      "Понятное отображение ограничений и ошибок."
+    ]},
+    {id:"h4",title:"Описать границы первой версии",subs:[
+      "Заказы и оплата не выполняются внутри сервиса.",
+      "Покупатель самостоятельно переходит к поставщику.",
+      "Отделить обязательные функции от будущих возможностей."
+    ]}
+  ]
+},
+
+{
+  id:"d17",
+  date:"2026-11-17",
+  hours:3.5,
+  stage:"Проектирование",
+  title:"Пользовательский сценарий, технологии и архитектура",
+  description:"Описываем путь пользователя и техническое устройство сервиса.",
+  result:"Подготовлены пункты 2.3.2–2.3.4.",
+  tasks:[
+    {id:"i1",title:"Разработать пользовательский сценарий",subs:[
+      "Ввод потребности в строительных товарах.",
+      "Проверка и уточнение списка.",
+      "Получение предложений.",
+      "Сравнение и просмотр вариантов закупки.",
+      "Переход на сайт поставщика."
+    ]},
+    {id:"i2",title:"Выбрать технологии разработки",subs:[
+      "Определить инструменты интерфейса.",
+      "Определить технологии серверной части.",
+      "Определить способ хранения данных.",
+      "Обосновать выбор технологий."
+    ]},
+    {id:"i3",title:"Спроектировать архитектуру",subs:[
+      "Разделить интерфейс, серверную логику и источники данных.",
+      "Описать взаимодействие компонентов.",
+      "Составить схему архитектуры."
+    ]}
+  ]
+},
+
+{
+  id:"d18",
+  date:"2026-11-18",
+  hours:4,
+  stage:"Проектирование",
+  title:"Интерфейс, сопоставление товаров и хранение данных",
+  description:"Завершаем проектную часть перед переходом к программированию.",
+  result:"Готовы пункты 2.3.5–2.3.7. Можно начинать разработку.",
+  tasks:[
+    {id:"j1",title:"Спроектировать пользовательский интерфейс",subs:[
+      "Определить основные экраны и элементы.",
+      "Продумать отображение корзины.",
+      "Продумать сравнение трёх вариантов закупки."
+    ]},
+    {id:"j2",title:"Разработать правила сопоставления товаров",subs:[
+      "Сравнение названий и характеристик.",
+      "Проверка производителя и единиц измерения.",
+      "Обработка частичного наличия.",
+      "Правила исключения неподходящих предложений."
+    ]},
+    {id:"j3",title:"Спроектировать серверную часть и хранение данных",subs:[
+      "Определить структуру данных товара.",
+      "Определить структуру предложения поставщика.",
+      "Описать хранение цен, наличия и доставки.",
+      "Подготовить схему взаимодействия модулей."
+    ]}
+  ]
+},
+
+{
+  id:"d19",
+  date:"2026-11-19",
+  hours:4,
+  stage:"Разработка",
+  title:"Подготовка проекта и базовая структура сайта",
+  description:"Начинаем программирование. Сначала создаём основу приложения.",
+  result:"Запускаемый проект с базовой структурой и подключёнными основными компонентами.",
+  tasks:[
+    {id:"k1",title:"Подготовить среду разработки",subs:[
+      "Создать структуру проекта.",
+      "Подключить необходимые библиотеки и инструменты.",
+      "Настроить запуск и сборку проекта."
+    ]},
+    {id:"k2",title:"Реализовать основу приложения",subs:[
+      "Создать основные страницы и компоненты.",
+      "Настроить переходы между экранами.",
+      "Подготовить общую структуру данных."
+    ]},
+    {id:"k3",title:"Начать описание реализации",subs:[
+      "Написать начало пункта 2.3.8.",
+      "Зафиксировать использованные технологии и структуру проекта."
+    ]}
+  ]
+},
+
+{
+  id:"d20",
+  date:"2026-11-20",
+  hours:4,
+  stage:"Разработка",
+  title:"Реализация пользовательского интерфейса",
+  description:"Создаём рабочие элементы интерфейса сервиса.",
+  result:"Пользователь может открыть интерфейс и работать с основными элементами списка закупки.",
+  tasks:[
+    {id:"l1",title:"Создать основной экран",subs:[
+      "Реализовать шапку и основную область.",
+      "Создать блок формирования закупки.",
+      "Добавить элементы управления."
+    ]},
+    {id:"l2",title:"Реализовать ввод товаров",subs:[
+      "Добавление товара.",
+      "Редактирование и удаление позиции.",
+      "Ввод количества и единиц измерения.",
+      "Ввод характеристик и комментариев."
+    ]},
+    {id:"l3",title:"Описать реализованный интерфейс",subs:[
+      "Продолжить пункт 2.3.8.",
+      "Добавить описание фактически реализованных элементов."
+    ]}
+  ]
+},
+
+{
+  id:"d21",
+  date:"2026-11-21",
+  hours:3.5,
+  stage:"Разработка",
+  title:"Корзина и управление закупкой",
+  description:"Доводим до рабочего состояния формирование списка потребности.",
+  result:"Рабочая корзина с возможностью изменения состава закупки.",
+  tasks:[
+    {id:"m1",title:"Реализовать управление корзиной",subs:[
+      "Добавление нескольких позиций.",
+      "Изменение количества и характеристик.",
+      "Удаление позиций.",
+      "Проверка обязательных полей."
+    ]},
+    {id:"m2",title:"Реализовать проверку введённых данных",subs:[
+      "Проверка пустых значений.",
+      "Проверка количества и единиц измерения.",
+      "Понятные сообщения об ошибках."
+    ]},
+    {id:"m3",title:"Проверить работу корзины",subs:[
+      "Проверить добавление и удаление товаров.",
+      "Проверить редактирование данных.",
+      "Описать результат в пункте 2.3.8."
+    ]}
+  ]
+},
+
+{
+  id:"d22",
+  date:"2026-11-22",
+  hours:3.5,
+  stage:"Разработка",
+  title:"Структура данных и тестовые поставщики",
+  description:"Готовим единый формат предложений, чтобы разные источники можно было обрабатывать одинаково.",
+  result:"Подготовлены структуры данных и демонстрационные источники поставщиков.",
+  tasks:[
+    {id:"n1",title:"Создать единую структуру предложения",subs:[
+      "Идентификатор поставщика.",
+      "Название и характеристики товара.",
+      "Цена и единица измерения.",
+      "Наличие и доступное количество.",
+      "Информация о доставке."
+    ]},
+    {id:"n2",title:"Подготовить источники данных",subs:[
+      "Подключить реально доступный тестовый источник, если он получен.",
+      "Подготовить демонстрационные данные для остальных источников.",
+      "Не выдавать демонстрационные данные за реальные предложения."
+    ]},
+    {id:"n3",title:"Описать взаимодействие с источниками",subs:[
+      "Начать пункт 2.3.10.",
+      "Зафиксировать реальные и демонстрационные способы получения данных."
+    ]}
+  ]
+},
+
+{
+  id:"d23",
+  date:"2026-11-23",
+  hours:4,
+  stage:"Разработка",
+  title:"Получение и обработка предложений поставщиков",
+  description:"Реализуем получение данных и приведение предложений к единому формату.",
+  result:"Сервис получает тестовые предложения и обрабатывает их в общей структуре.",
+  tasks:[
+    {id:"o1",title:"Реализовать получение данных",subs:[
+      "Создать модуль получения предложений.",
+      "Реализовать чтение тестовых данных.",
+      "Подключить доступный реальный источник, если это возможно."
+    ]},
+    {id:"o2",title:"Реализовать обработку данных",subs:[
+      "Приведение полей к единому формату.",
+      "Обработка отсутствующих значений.",
+      "Обработка ошибок получения данных."
+    ]},
+    {id:"o3",title:"Описать реализацию",subs:[
+      "Продолжить пункт 2.3.9.",
+      "Продолжить пункт 2.3.10."
+    ]}
+  ]
+},
+
+{
+  id:"d24",
+  date:"2026-11-24",
+  hours:4,
+  stage:"Разработка",
+  title:"Сопоставление товаров и проверка наличия",
+  description:"Реализуем один из наиболее важных механизмов сервиса.",
+  result:"Сервис отличает подходящие предложения от неподходящих и проверяет доступное количество.",
+  tasks:[
+    {id:"p1",title:"Реализовать сопоставление товаров",subs:[
+      "Сравнивать наименования.",
+      "Сравнивать обязательные характеристики.",
+      "Учитывать производителя и единицы измерения.",
+      "Исключать неподходящие предложения."
+    ]},
+    {id:"p2",title:"Реализовать проверку наличия",subs:[
+      "Исключать товары без подтверждённого наличия.",
+      "Проверять доступное количество.",
+      "Допускать распределение количества между несколькими поставщиками."
+    ]},
+    {id:"p3",title:"Проверить механизм",subs:[
+      "Проверить точное совпадение товара.",
+      "Проверить неподходящий товар.",
+      "Проверить частичное наличие.",
+      "Описать механизм в пункте 2.3.11."
+    ]}
+  ]
+},
+
+{
+  id:"d25",
+  date:"2026-11-25",
+  hours:4,
+  stage:"Разработка",
+  title:"Расчёт полной стоимости закупки",
+  description:"Реализуем расчёт расходов по каждой сформированной корзине поставщика.",
+  result:"Сервис рассчитывает стоимость товаров и подтверждённые дополнительные расходы.",
+  tasks:[
+    {id:"q1",title:"Реализовать расчёт стоимости товаров",subs:[
+      "Учитывать цену и необходимое количество.",
+      "Обрабатывать итоговую цену со скидкой, если её подтвердил поставщик.",
+      "Не рассчитывать неподтверждённые скидки самостоятельно."
+    ]},
+    {id:"q2",title:"Реализовать учёт доставки и расходов",subs:[
+      "Учитывать подтверждённую стоимость доставки.",
+      "Учитывать обязательные дополнительные расходы.",
+      "Не подменять неизвестную стоимость доставки приблизительной."
+    ]},
+    {id:"q3",title:"Проверить итоговые расчёты",subs:[
+      "Проверить сумму товаров.",
+      "Проверить стоимость доставки.",
+      "Проверить итоговую стоимость всей закупки.",
+      "Описать расчёт в пункте 2.3.12."
+    ]}
+  ]
+},
+
+{
+  id:"d26",
+  date:"2026-11-26",
+  hours:4,
+  stage:"Разработка",
+  title:"Реализация алгоритмов оптимизации",
+  description:"Реализуем три варианта закупки на основе разработанной математической модели.",
+  result:"Сервис формирует три варианта закупки либо сообщает, почему конкретный вариант недоступен.",
+  tasks:[
+    {id:"r1",title:"Реализовать минимальную совокупную стоимость",subs:[
+      "Распределить позиции между подходящими поставщиками.",
+      "Учитывать полную стоимость, включая доставку.",
+      "Проверять полное покрытие потребности."
+    ]},
+    {id:"r2",title:"Реализовать закупку у одного поставщика",subs:[
+      "Проверять возможность закрыть весь список у одного поставщика.",
+      "Выбирать наиболее выгодное полное предложение.",
+      "Показывать недоступность варианта, если потребность не закрывается."
+    ]},
+    {id:"r3",title:"Реализовать сбалансированный вариант",subs:[
+      "Учитывать стоимость и количество заказов.",
+      "Сравнивать сформированные решения.",
+      "Описать применённый критерий балансировки."
+    ]}
+  ]
+},
+
+{
+  id:"d27",
+  date:"2026-11-27",
+  hours:3.5,
+  stage:"Разработка",
+  title:"Отображение результатов оптимизации",
+  description:"Делаем результаты понятными пользователю.",
+  result:"Пользователь видит три варианта закупки, состав заказов, стоимость и ограничения.",
+  tasks:[
+    {id:"s1",title:"Создать экран результатов",subs:[
+      "Отобразить три варианта закупки.",
+      "Показать итоговую стоимость каждого варианта.",
+      "Показать распределение товаров по поставщикам."
+    ]},
+    {id:"s2",title:"Добавить подробности сравнения",subs:[
+      "Отобразить стоимость товаров.",
+      "Отобразить доставку и дополнительные расходы.",
+      "Показать недоступные варианты и причины.",
+      "Добавить ссылки на сайты поставщиков."
+    ]},
+    {id:"s3",title:"Описать реализацию алгоритмов",subs:[
+      "Продолжить пункт 2.3.13.",
+      "Описать фактическую работу трёх вариантов."
+    ]}
+  ]
+},
+
+{
+  id:"d28",
+  date:"2026-11-28",
+  hours:4,
+  stage:"Тестирование",
+  title:"Комплексное тестирование и исправление ошибок",
+  description:"Проверяем сервис целиком на нескольких сценариях закупки.",
+  result:"Подготовлена рабочая демонстрационная версия и результаты тестирования.",
+  tasks:[
+    {id:"t1",title:"Проверить основные сценарии",subs:[
+      "Закупка у одного поставщика.",
+      "Закупка у нескольких поставщиков.",
+      "Частичное наличие товара.",
+      "Отсутствие подходящего товара.",
+      "Недоступность доставки или источника данных."
+    ]},
+    {id:"t2",title:"Проверить корректность расчётов",subs:[
+      "Проверить сумму товаров и доставки.",
+      "Проверить распределение количества.",
+      "Проверить полноту каждого варианта."
+    ]},
+    {id:"t3",title:"Исправить ошибки и описать тестирование",subs:[
+      "Исправить обнаруженные ошибки.",
+      "Подготовить таблицу тестовых сценариев.",
+      "Завершить пункт 2.3.14."
+    ]}
+  ]
+},
+
+{
+  id:"d29",
+  date:"2026-11-29",
+  hours:4,
+  stage:"Завершение",
+  title:"Оценка эффективности, заключение и приложения",
+  description:"Проводим оценку результата и завершаем основную часть пояснительной записки.",
+  result:"Готовы пункт 2.4, заключение и основные приложения.",
+  tasks:[
+    {id:"u1",title:"Провести оценку эффективности",subs:[
+      "Подготовить пример закупки для сравнения.",
+      "Рассчитать результат ручного способа.",
+      "Сравнить его с результатом работы сервиса.",
+      "Оценить экономию времени и/или стоимости на конкретном примере.",
+      "Описать ограничения оценки."
+    ]},
+    {id:"u2",title:"Написать заключение",subs:[
+      "Сопоставить результат с поставленной целью.",
+      "Проверить выполнение задач проекта.",
+      "Сформулировать выводы и перспективы развития."
+    ]},
+    {id:"u3",title:"Подготовить приложения",subs:[
+      "Добавить схемы и таблицы.",
+      "Добавить скриншоты разработанного сервиса.",
+      "Добавить примеры тестирования."
+    ]}
+  ]
+},
+
+{
+  id:"d30",
+  date:"2026-11-30",
+  hours:3.5,
+  stage:"Завершение",
+  title:"Финальная проверка и подготовка к защите",
+  description:"Последний день. Новые крупные функции не добавляем — доводим работу до готового состояния.",
+  result:"Полностью оформленная пояснительная записка, рабочая демонстрация и готовность к защите.",
+  tasks:[
+    {id:"v1",title:"Проверить пояснительную записку",subs:[
+      "Проверить содержание и нумерацию.",
+      "Проверить сноски и список источников.",
+      "Проверить таблицы, схемы и приложения.",
+      "Проверить орфографию и оформление."
+    ]},
+    {id:"v2",title:"Подготовить демонстрацию сервиса",subs:[
+      "Проверить запуск сайта.",
+      "Подготовить демонстрационные данные.",
+      "Проверить прохождение основного пользовательского сценария."
+    ]},
+    {id:"v3",title:"Подготовиться к защите",subs:[
+      "Подготовить презентацию.",
+      "Составить короткий рассказ о проекте.",
+      "Подготовить ответы на возможные вопросы."
+    ]}
+  ]
 }
 
-// Безопасная миграция: сохраняем статусы, подзадачи, заметки, даты; неизвестные записи уходят в legacy, а не удаляются
-function normalize(raw){
-  const st = { schema: 3, lastCheck: null, tasks: {}, legacy: {} };
-  if (raw && typeof raw === 'object'){
-    if (typeof raw.lastCheck === 'string' && DATE_RE.test(raw.lastCheck)) st.lastCheck = raw.lastCheck;
-    if (raw.legacy && typeof raw.legacy === 'object') st.legacy = raw.legacy;
-  }
-  const old = (raw && raw.tasks && typeof raw.tasks === 'object' && !Array.isArray(raw.tasks)) ? raw.tasks : {};
-  plan.forEach(p => {
-    const o = (old[p.id] && typeof old[p.id] === 'object') ? old[p.id] : {};
-    st.tasks[p.id] = {
-      status: normStatus(o.status),
-      subs: p.s.map((_, i) => Array.isArray(o.subs) ? !!o.subs[i] : false),
-      notes: typeof o.notes === 'string' ? o.notes : '',
-      origDate: p.d,
-      date: (typeof o.date === 'string' && DATE_RE.test(o.date)) ? o.date : p.d
-    };
+];
+
+/* ===================================================
+   СОХРАНЕНИЕ И СОСТОЯНИЕ
+   =================================================== */
+
+const STORAGE_KEY = "procurement_planner_claude_v3";
+
+function freshState() {
+  const checks = {};
+  plan.forEach(day => {
+    day.tasks.forEach(task => {
+      if (task.done) checks[task.id] = true;
+      task.subs.forEach((sub, index) => {
+        if (task.done) checks[task.id + "_" + index] = true;
+      });
+    });
   });
-  Object.keys(old).forEach(k => { if (!planById[k]) st.legacy[k] = old[k]; });
-  return st;
+
+  return {
+    checks,
+    statuses: {},
+    notes: {},
+    extra: {},
+    moved: {},
+    movedDates: []
+  };
 }
 
-function loadState(){
-  let raw = null;
-  try { raw = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) {}
-  return normalize(raw);
-}
-function saveState(){
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        ...freshState(),
+        ...parsed,
+        checks: {...freshState().checks, ...(parsed.checks || {})}
+      };
+    }
+  } catch(e) {
+    console.warn("Не удалось загрузить прогресс", e);
+  }
+  return freshState();
 }
 
 let state = loadState();
 
-/* ============ Автоматический перенос задач ============ */
-// Все незавершённые задачи, чья дата уже прошла, переносятся вперёд по порядку на ближайшие свободные дни,
-// начиная с сегодняшнего. Расписание при необходимости продлевается за 30 ноября — ничего не теряется.
-// Функция идемпотентна: если просроченных задач нет, ничего не меняется (дубликаты невозможны).
-function shiftSchedule(today){
-  const tasks = state.tasks;
-  const overdue = plan.some(p => tasks[p.id].status !== 'done' && tasks[p.id].date < today);
-  let changed = state.lastCheck !== today;
-  state.lastCheck = today;
-  if (overdue){
-    const taken = new Set();
-    plan.forEach(p => { const t = tasks[p.id]; if (t.status === 'done' && t.date >= today) taken.add(t.date); });
-    let cursor = today;
-    plan.forEach(p => {
-      const t = tasks[p.id];
-      if (t.status === 'done') return;
-      while (taken.has(cursor)) cursor = addDays(cursor, 1);
-      t.date = cursor;
-      taken.add(cursor);
-      cursor = addDays(cursor, 1);
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+/* ===================================================
+   АВТОМАТИЧЕСКИЙ ПЕРЕНОС
+   =================================================== */
+
+function localDateString() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const day = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+
+function moveOverdueTasks() {
+  const today = localDateString();
+
+  plan.forEach((day, index) => {
+    if (day.date >= today) return;
+    if (state.movedDates.includes(day.date)) return;
+
+    const nextDay = plan[index+1];
+    if (!nextDay) return;
+
+    const destination = state.extra[nextDay.date] || [];
+
+    day.tasks.forEach(task => {
+      task.subs.forEach((sub, subIndex) => {
+        const key = task.id + "_" + subIndex;
+        if (!state.checks[key] && !state.moved[key]) {
+          destination.push({
+            id: "move_" + key,
+            title: sub,
+            source: day.date,
+            sourceTitle: task.title
+          });
+          state.moved[key] = true;
+        }
+      });
     });
-    changed = true;
-  }
-  if (changed) saveState();
-  return overdue;
-}
 
-function checkMidnight(){
-  const today = todayStr();
-  const dayChanged = state.lastCheck !== today;
-  const moved = shiftSchedule(today);
-  updateHeader();
-  if (dayChanged || moved) requestRender();
-}
-
-/* ============ Вычисления ============ */
-function taskProgress(id){
-  const t = state.tasks[id];
-  if (t.status === 'done') return 1;
-  return t.subs.length ? t.subs.filter(Boolean).length / t.subs.length : 0;
-}
-function calcTotals(){
-  let hAll = 0, hDone = 0, done = 0;
-  plan.forEach(p => { hAll += p.h; hDone += p.h * taskProgress(p.id); if (state.tasks[p.id].status === 'done') done++; });
-  return { pct: hAll ? hDone / hAll : 0, hAll, hDone, done };
-}
-function stageProgress(sd){
-  let hAll = 0, hDone = 0;
-  plan.forEach(p => { if (p.d >= sd.from && p.d <= sd.to){ hAll += p.h; hDone += p.h * taskProgress(p.id); } });
-  return hAll ? hDone / hAll : 0;
-}
-const fmtH = n => (Math.round(n * 10) / 10).toString().replace('.', ',');
-
-/* ============ Рендер ============ */
-const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const STATUS_LABEL = { todo:'Не начато', progress:'В работе', done:'Выполнено' };
-let activeTab = 'today';
-const openSet = new Set();
-let renderPending = false;
-
-function cardHTML(p, expanded, collapsible){
-  const t = state.tasks[p.id];
-  const today = todayStr();
-  const prog = Math.round(taskProgress(p.id) * 100);
-  const shift = diffDays(t.date, t.origDate);
-  const isToday = t.date === today;
-  const checked = t.subs.filter(Boolean).length;
-  let h = `<article class="task card ${isToday ? 'today' : ''} ${t.status === 'done' ? 'done-card' : ''} ${expanded && collapsible ? 'open' : ''}" data-id="${p.id}">`;
-  h += `<div class="p-4 sm:p-5 flex gap-4 items-start ${collapsible ? 'cursor-pointer' : ''}" ${collapsible ? 'data-act="toggle"' : ''}>
-    <div class="datebox"><b>${dayNum(t.date)}</b><span>${monShort(t.date)}</span></div>
-    <div class="flex-1 min-w-0">
-      <div class="flex flex-wrap gap-1.5 mb-1.5">
-        ${isToday ? '<span class="chip now">Сегодня</span>' : ''}
-        <span class="chip ${t.status}">${STATUS_LABEL[t.status]}</span>
-        ${shift !== 0 ? `<span class="chip moved">Перенесено с ${fmtLong(t.origDate)}${shift > 0 ? ' · +' + shift + ' дн.' : ''}</span>` : ''}
-        ${p.ms ? '<span class="chip ms">Контрольная точка</span>' : ''}
-      </div>
-      <h3 class="font-bold leading-snug">${esc(p.t)}</h3>
-      <div class="text-xs mt-1.5" style="color:var(--muted)">${fmtH(p.h)} ч · подзадачи ${checked}/${p.s.length} · ${prog}%</div>
-      <div class="bar mt-2 ${t.status === 'done' ? 'ok' : ''}"><i style="width:${prog}%"></i></div>
-    </div>
-    ${collapsible ? '<svg class="chev flex-none mt-1" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7488" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' : ''}
-  </div>`;
-  if (expanded){
-    h += `<div class="px-4 sm:px-5 pb-5 pt-1 border-t" style="border-color:var(--line)">`;
-    if (p.ms) h += `<div class="mt-3 text-sm rounded-xl px-3 py-2" style="background:#fdf2f8;color:#9d174d">🚩 ${esc(p.ms)}</div>`;
-    h += `<div class="mt-3">`;
-    p.s.forEach((s, i) => {
-      h += `<label class="sub ${t.subs[i] ? 'checked' : ''}"><input type="checkbox" data-act="sub" data-i="${i}" ${t.subs[i] ? 'checked' : ''}><span>${esc(s)}</span></label>`;
+    const previousExtra = state.extra[day.date] || [];
+    previousExtra.forEach(item => {
+      if (!state.checks[item.id] && !state.moved[item.id]) {
+        destination.push(item);
+        state.moved[item.id] = true;
+      }
     });
-    h += `</div><div class="flex flex-wrap gap-2 mt-4">`;
-    ['todo', 'progress', 'done'].forEach(s => {
-      h += `<button class="st-btn ${s} ${t.status === s ? 'on' : ''}" data-act="status" data-s="${s}">${STATUS_LABEL[s]}</button>`;
-    });
-    h += `</div><textarea class="note mt-4" data-act="notes" placeholder="Заметки к задаче…">${esc(t.notes)}</textarea></div>`;
-  }
-  return h + '</article>';
-}
 
-function sortedPlan(){
-  return plan.slice().sort((a, b) => {
-    const da = state.tasks[a.id].date, db = state.tasks[b.id].date;
-    return da < db ? -1 : da > db ? 1 : (a.d < b.d ? -1 : 1);
+    state.extra[nextDay.date] = destination;
+    state.movedDates.push(day.date);
   });
-}
 
-function renderViews(){
-  const today = todayStr();
-  const list = sortedPlan();
-  // Сегодня
-  const todays = list.filter(p => state.tasks[p.id].date === today);
-  const tv = document.getElementById('view-today');
-  if (todays.length){
-    tv.innerHTML = '<div class="space-y-3">' + todays.map(p => cardHTML(p, true, false)).join('') + '</div>';
-  } else {
-    const next = list.find(p => state.tasks[p.id].status !== 'done' && state.tasks[p.id].date > today);
-    if (next){
-      tv.innerHTML = `<div class="card p-5 mb-3 text-sm" style="color:var(--muted)">На сегодня задач нет. Ближайшая задача — ${fmtLong(state.tasks[next.id].date)}.</div>` + cardHTML(next, true, false);
-    } else {
-      tv.innerHTML = '<div class="card p-8 text-center"><div class="text-4xl mb-2">🎉</div><div class="font-bold">Все задачи выполнены</div></div>';
-    }
-  }
-  // Расписание
-  document.getElementById('view-schedule').innerHTML = list.map(p => cardHTML(p, openSet.has(p.id), true)).join('');
-}
-
-function updateSummary(){
-  const T = calcTotals();
-  const pct = Math.round(T.pct * 100);
-  document.getElementById('pct').textContent = pct + '%';
-  document.getElementById('donut').style.strokeDashoffset = (314.16 * (1 - T.pct)).toFixed(2);
-  document.getElementById('statDone').textContent = T.done;
-  document.getElementById('statAll').textContent = plan.length;
-  document.getElementById('statHours').textContent = fmtH(T.hDone);
-  document.getElementById('statHoursAll').textContent = fmtH(T.hAll);
-  stagesDef.forEach((sd, i) => {
-    const v = stageProgress(sd), p = Math.round(v * 100);
-    document.getElementById('stg-bar-' + i).style.width = p + '%';
-    document.getElementById('stg-bar-' + i).parentElement.classList.toggle('ok', p === 100);
-    document.getElementById('stg-pct-' + i).textContent = p + '%';
-  });
-}
-
-function updateHeader(){
-  document.getElementById('todayLabel').textContent = 'Сегодня: ' + fmtFull(todayStr());
-}
-
-function render(){
-  renderPending = false;
-  renderViews();
-  updateSummary();
-}
-function requestRender(){
-  const a = document.activeElement;
-  if (a && a.tagName === 'TEXTAREA') { renderPending = true; return; }
-  render();
-}
-
-/* ============ События ============ */
-function applyTab(){
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === activeTab));
-  document.getElementById('view-today').classList.toggle('hidden', activeTab !== 'today');
-  document.getElementById('view-schedule').classList.toggle('hidden', activeTab !== 'schedule');
-}
-document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => { activeTab = b.dataset.tab; applyTab(); }));
-
-function onClick(e){
-  const el = e.target.closest('[data-act]');
-  if (!el) return;
-  const card = el.closest('[data-id]');
-  if (!card) return;
-  const id = card.dataset.id, act = el.dataset.act, t = state.tasks[id];
-  if (act === 'toggle'){
-    if (e.target.closest('textarea,input,label,button')) return;
-    openSet.has(id) ? openSet.delete(id) : openSet.add(id);
-    render();
-  } else if (act === 'status'){
-    t.status = el.dataset.s;
-    saveState(); render();
-  } else if (act === 'sub'){
-    t.subs[Number(el.dataset.i)] = el.checked;
-    const all = t.subs.every(Boolean), any = t.subs.some(Boolean);
-    if (all) t.status = 'done';
-    else if (t.status === 'done') t.status = 'progress';
-    else if (any && t.status === 'todo') t.status = 'progress';
-    saveState(); render();
-  }
-}
-['view-today', 'view-schedule'].forEach(id => {
-  const v = document.getElementById(id);
-  v.addEventListener('click', onClick);
-  v.addEventListener('input', e => {
-    if (e.target.dataset.act === 'notes'){
-      const card = e.target.closest('[data-id]');
-      state.tasks[card.dataset.id].notes = e.target.value;
-      saveState();
-    }
-  });
-  v.addEventListener('focusout', () => { setTimeout(() => { if (renderPending) requestRender(); }, 0); });
-});
-
-document.getElementById('resetBtn').addEventListener('click', () => {
-  if (!confirm('Сбросить весь прогресс, статусы, подзадачи и заметки?')) return;
-  const legacy = state.legacy;
-  state = normalize(null);
-  state.legacy = legacy;
   saveState();
-  openSet.clear();
-  checkMidnight();
+}
+
+moveOverdueTasks();
+
+/* ===================================================
+   ВЫЧИСЛЕНИЯ
+   =================================================== */
+
+let selectedIndex = 0;
+
+function allSubtasks() {
+  const result = [];
+  plan.forEach(day => {
+    day.tasks.forEach(task => {
+      task.subs.forEach((sub,index) => {
+        const key = task.id + "_" + index;
+        if (!state.moved[key]) result.push(key);
+      });
+    });
+    (state.extra[day.date] || []).forEach(item => {
+      if (!state.moved[item.id]) result.push(item.id);
+    });
+  });
+  return result;
+}
+
+function isTaskDone(task) {
+  if (task.subs.length === 0) return !!state.checks[task.id];
+  return task.subs.every((sub,index) =>
+    !!state.checks[task.id + "_" + index]
+  );
+}
+
+function dayStats(day) {
+  const keys = [];
+
+  day.tasks.forEach(task => {
+    task.subs.forEach((sub,index) => {
+      const key = task.id + "_" + index;
+      if (!state.moved[key]) keys.push(key);
+    });
+  });
+
+  (state.extra[day.date] || []).forEach(item => {
+    if (!state.moved[item.id]) keys.push(item.id);
+  });
+
+  const done = keys.filter(key => state.checks[key]).length;
+  return {done, all:keys.length, pct:keys.length ? Math.round(done/keys.length*100) : 0};
+}
+
+function overallStats() {
+  const keys = allSubtasks();
+  const done = keys.filter(key => state.checks[key]).length;
+  const all = keys.length;
+  const pct = all ? Math.round(done/all*100) : 0;
+  const hours = plan.reduce((sum,day) => sum + day.hours,0);
+  const daysDone = plan.filter(day => {
+    const s = dayStats(day);
+    return s.all > 0 && s.done === s.all;
+  }).length;
+
+  return {done,all,pct,hours,daysDone};
+}
+
+function renderSummary() {
+  const s = overallStats();
+  document.getElementById("pct").textContent = s.pct + "%";
+  document.getElementById("statDone").textContent = s.done;
+  document.getElementById("statAll").textContent = s.all;
+  document.getElementById("statHours").textContent = s.hours;
+  document.getElementById("statDays").textContent = s.daysDone;
+
+  const circumference = 307.88;
+  document.getElementById("donut").style.strokeDashoffset =
+    circumference * (1-s.pct/100);
+
+  const stages = [
+    {name:"Первая глава", ids:["d08","d09"]},
+    {name:"Исследование поставщиков", ids:["d10","d11","d12"]},
+    {name:"Математическая модель", ids:["d13","d14","d15"]},
+    {name:"Проектирование", ids:["d16","d17","d18"]},
+    {name:"Разработка", ids:["d19","d20","d21","d22","d23","d24","d25","d26","d27"]},
+    {name:"Тестирование", ids:["d28"]},
+    {name:"Завершение", ids:["d29","d30"]}
+  ];
+
+  document.getElementById("stages").innerHTML = stages.map(stage => {
+    const days = stage.ids.map(id => plan.find(d => d.id===id));
+    const all = days.reduce((sum,d) => sum + dayStats(d).all,0);
+    const done = days.reduce((sum,d) => sum + dayStats(d).done,0);
+    const pct = all ? Math.round(done/all*100) : 0;
+
+    return `
+      <div class="stage-item">
+        <div class="stage-name">${stage.name}</div>
+        <div class="bar"><i style="width:${pct}%"></i></div>
+        <div class="stage-percent">${pct}%</div>
+      </div>`;
+  }).join("");
+}
+
+/* ===================================================
+   НАВИГАЦИЯ ПО ДАТАМ
+   =================================================== */
+
+function formatShortDate(date) {
+  const d = new Date(date + "T12:00:00");
+  return {
+    day: d.getDate(),
+    weekday: ["вс","пн","вт","ср","чт","пт","сб"][d.getDay()]
+  };
+}
+
+function renderDates() {
+  const today = localDateString();
+
+  document.getElementById("dates").innerHTML = plan.map((day,index) => {
+    const d = formatShortDate(day.date);
+    const stats = dayStats(day);
+    const active = index === selectedIndex;
+    const completed = stats.all > 0 && stats.done === stats.all;
+
+    return `
+      <button class="date-btn ${active ? "active" : ""} ${completed ? "completed" : ""}"
+        data-index="${index}">
+        <b>${d.day}</b>
+        <small>${d.weekday}</small>
+      </button>`;
+  }).join("");
+
+  document.querySelectorAll(".date-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedIndex = Number(btn.dataset.index);
+      render();
+    });
+  });
+
+  const active = document.querySelector(".date-btn.active");
+  if (active) active.scrollIntoView({block:"nearest",inline:"nearest",behavior:"smooth"});
+
+  const todayLabel = document.getElementById("todayLabel");
+  const todayPlan = plan.find(d => d.date === today);
+  todayLabel.textContent = todayPlan
+    ? "Сегодня: " + formatFullDate(today)
+    : "План работы · 8–30 ноября";
+}
+
+function formatFullDate(date) {
+  const d = new Date(date + "T12:00:00");
+  return d.toLocaleDateString("ru-RU", {
+    day:"numeric", month:"long", year:"numeric"
+  });
+}
+
+document.getElementById("prevDay").addEventListener("click", () => {
+  selectedIndex = Math.max(0,selectedIndex-1);
   render();
 });
 
-/* ============ Инициализация и автоматическая проверка даты ============ */
-stagesDef.forEach((sd, i) => {
-  document.getElementById('stages').insertAdjacentHTML('beforeend', `
-    <div>
-      <div class="flex justify-between text-sm mb-1"><span class="font-semibold">${i + 1}. ${sd.name} <span class="font-normal" style="color:var(--muted)">· ${sd.range}</span></span><span id="stg-pct-${i}" class="font-bold">0%</span></div>
-      <div class="bar"><i id="stg-bar-${i}" style="width:0%"></i></div>
-    </div>`);
+document.getElementById("nextDay").addEventListener("click", () => {
+  selectedIndex = Math.min(plan.length-1,selectedIndex+1);
+  render();
 });
 
-applyTab();
-updateHeader();
-checkMidnight();   // при первом открытии / после долгого перерыва
+/* ===================================================
+   ОТОБРАЖЕНИЕ ЗАДАЧ
+   =================================================== */
+
+function renderDay() {
+  const day = plan[selectedIndex];
+  const stats = dayStats(day);
+  const status = state.statuses[day.id] || "todo";
+
+  const date = new Date(day.date + "T12:00:00");
+  const fullDate = date.toLocaleDateString("ru-RU", {
+    weekday:"long",day:"numeric",month:"long"
+  });
+
+  let tasksHTML = day.tasks.map(task => {
+    const done = isTaskDone(task);
+
+    const subs = task.subs.map((sub,index) => {
+      const key = task.id + "_" + index;
+      const checked = !!state.checks[key];
+      const moved = !!state.moved[key];
+
+      if (moved) {
+        return `<div class="subtask">
+          <span style="color:#b77930">↗ Перенесено на следующий день</span>
+        </div>`;
+      }
+
+      return `
+        <label class="subtask ${checked ? "checked" : ""}">
+          <input type="checkbox" data-check="${key}" ${checked ? "checked" : ""}>
+          <span>${sub}</span>
+        </label>`;
+    }).join("");
+
+    return `
+      <div class="task ${done ? "done" : ""}">
+        <div class="task-top">
+          <input class="task-check" type="checkbox"
+            data-task="${task.id}" ${done ? "checked" : ""}>
+          <div class="task-content">
+            <div class="task-title">${task.title}</div>
+            <div class="task-meta">${task.subs.length} подзадач</div>
+          </div>
+          <span class="task-badge">${done ? "Выполнено" : "Задача"}</span>
+        </div>
+        <div class="subtasks">${subs}</div>
+      </div>`;
+  }).join("");
+
+  const extras = (state.extra[day.date] || []).filter(item => !state.moved[item.id]);
+
+  if (extras.length) {
+    tasksHTML += extras.map(item => {
+      const checked = !!state.checks[item.id];
+      return `
+        <div class="task ${checked ? "done" : ""}">
+          <div class="task-top">
+            <input class="task-check" type="checkbox"
+              data-check="${item.id}" ${checked ? "checked" : ""}>
+            <div class="task-content">
+              <div class="task-title">${item.title}</div>
+              <div class="task-meta">Перенесено с ${formatFullDate(item.source)}</div>
+            </div>
+            <span class="task-badge moved">Перенесено</span>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  document.getElementById("dayView").innerHTML = `
+    <section class="card day-card">
+      <div class="day-header">
+        <div>
+          <div class="day-date">${fullDate}</div>
+          <div class="day-title">${day.title}</div>
+          <div class="day-description">${day.description}</div>
+        </div>
+        <div class="hours">${day.hours} ч</div>
+      </div>
+
+      <div class="day-progress">
+        <div class="bar"><i style="width:${stats.pct}%"></i></div>
+        <div class="day-progress-text">${stats.done} из ${stats.all} · ${stats.pct}%</div>
+      </div>
+
+      <div class="task-list">${tasksHTML}</div>
+
+      <div class="day-result">
+        <strong>Результат дня:</strong><br>
+        ${day.result}
+      </div>
+
+      <div class="note-block">
+        <div class="note-title">Мои заметки</div>
+        <textarea class="note" id="dayNote"
+          placeholder="Запиши сюда результаты, ссылки, вопросы или то, что нужно доделать...">${state.notes[day.id] || ""}</textarea>
+      </div>
+
+      <div class="controls">
+        <button class="status-btn ${status==="todo"?"active todo":""}" data-status="todo">Не начато</button>
+        <button class="status-btn ${status==="progress"?"active progress":""}" data-status="progress">В работе</button>
+        <button class="status-btn ${status==="done"?"active done":""}" data-status="done">Выполнено</button>
+      </div>
+    </section>`;
+
+  document.querySelectorAll("[data-check]").forEach(input => {
+    input.addEventListener("change", () => {
+      state.checks[input.dataset.check] = input.checked;
+      saveState();
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-task]").forEach(input => {
+    input.addEventListener("change", () => {
+      const task = day.tasks.find(t => t.id === input.dataset.task);
+      if (!task) return;
+      task.subs.forEach((sub,index) => {
+        state.checks[task.id + "_" + index] = input.checked;
+      });
+      saveState();
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-status]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.statuses[day.id] = btn.dataset.status;
+      if (btn.dataset.status === "done") {
+        day.tasks.forEach(task => {
+          task.subs.forEach((sub,index) => {
+            state.checks[task.id + "_" + index] = true;
+          });
+        });
+        (state.extra[day.date] || []).forEach(item => {
+          state.checks[item.id] = true;
+        });
+      }
+      saveState();
+      render();
+    });
+  });
+
+  document.getElementById("dayNote").addEventListener("input", e => {
+    state.notes[day.id] = e.target.value;
+    saveState();
+  });
+}
+
+/* ===================================================
+   ОБЩЕЕ ОБНОВЛЕНИЕ
+   =================================================== */
+
+function render() {
+  renderSummary();
+  renderDates();
+  renderDay();
+}
+
+const today = localDateString();
+const todayIndex = plan.findIndex(d => d.date === today);
+selectedIndex = todayIndex >= 0 ? todayIndex : 0;
+
 render();
-setInterval(checkMidnight, 10000);                          // каждые 10 секунд
-document.addEventListener('visibilitychange', () => { if (!document.hidden) checkMidnight(); });  // возврат на вкладку
-window.addEventListener('focus', checkMidnight);
-window.addEventListener('pageshow', checkMidnight);
-window.addEventListener('storage', e => {                    // синхронизация между вкладками
-  if (e.key === STORAGE_KEY){ state = loadState(); checkMidnight(); render(); }
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  const confirmed = confirm(
+    "Сбросить отметки выполнения, статусы, заметки и перенесённые задачи?"
+  );
+  if (!confirmed) return;
+
+  state = freshState();
+  saveState();
+  render();
 });
 </script>
+
 </body>
 </html>
+
